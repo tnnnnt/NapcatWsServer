@@ -1,14 +1,17 @@
 ﻿#include <boost/asio.hpp>
+#include <boost/asio/ssl.hpp>
 #include <boost/beast/core.hpp>
-#include <boost/beast/websocket.hpp>
-#include <boost/json.hpp>
-#include <iostream>
-#include <thread>
-#include <windows.h>
 #include <boost/beast/http.hpp>
 #include <boost/beast/ssl.hpp>
-#include <boost/asio/ssl.hpp>
+#include <boost/beast/websocket.hpp>
+#include <boost/json.hpp>
+#include <filesystem>
+#include <iostream>
+#include <thread>
+#include <vector>
+#include <windows.h>
 
+namespace fs = std::filesystem;
 namespace json = boost::json;
 namespace beast = boost::beast;
 namespace http = beast::http;
@@ -16,6 +19,28 @@ namespace websocket = beast::websocket;
 namespace net = boost::asio;
 namespace ssl = net::ssl;
 using tcp = net::ip::tcp;
+
+const std::string WORK_DIR = "C:/QQRobot"; // 替换为你的工作目录路径
+const std::string EAT_DIR = WORK_DIR + "/eat"; // 吃什么
+
+static void get_files(const fs::path& dir_path, std::vector<std::string>& files) {
+	files.clear();
+	if (!fs::exists(dir_path) || !fs::is_directory(dir_path)) {
+		throw std::runtime_error("Path is not a valid directory.");
+	}
+	for (const auto& entry : fs::directory_iterator(dir_path)) {
+		if (entry.is_regular_file()) {
+			files.push_back(entry.path().filename().string());
+		}
+	}
+}
+
+static std::string remove_extension(const std::string& filename) {
+	const std::size_t pos = filename.find_last_of('.');
+	if (pos == std::string::npos)
+		return filename;  // 没有后缀
+	return filename.substr(0, pos);
+}
 
 // 做出响应
 static void reply(const std::string& action, const json::object& params, websocket::stream<tcp::socket>& ws) {
@@ -35,26 +60,48 @@ static void handle_private_message(const json::object& obj, websocket::stream<tc
 
 // 处理群消息
 static void handle_group_message(const json::object& obj, websocket::stream<tcp::socket> &ws) {
+	const auto time = obj.at("time").as_int64();
+	const auto group_id = obj.at("group_id").as_int64();
 	const auto& message_array = obj.at("message").as_array();
-	const auto message_len = message_array.size();
-	if (!message_len) return;
-	if (message_len == 1) {
-		const auto& seg_obj = message_array[0].as_object();
+	for (const auto& seg : message_array) {
+		const auto& seg_obj = seg.as_object();
 		const std::string type = seg_obj.at("type").as_string().c_str();
 		if (type == "text") {
 			const std::string text = seg_obj.at("data").as_object().at("text").as_string().c_str();
-			std::cout << "text: " << text << std::endl;
-			if (text == "你好") {
-				std::cout << "text is 你好" << std::endl;
+			if (text.find("吃什么") != std::string::npos)
+			{
+				std::vector<std::string> files;
+				get_files(EAT_DIR, files);
 				json::object params;
-				params["group_id"] = obj.at("group_id");
-				params["message"] = "你好";
+				params["group_id"] = group_id;
+				json::array message;
+				if (files.empty()) {
+					message.emplace_back(json::object{
+						{"type", "text"},
+						{"data", json::object{
+							{"text", "别吃"}
+						}}
+						});
+				}
+				else {
+					const std::string random_file = files[time % files.size()];
+					message.emplace_back(json::object{
+						{"type", "text"},
+						{"data", json::object{
+							{"text", "推荐" + remove_extension(random_file)}
+						}}
+						});
+					message.emplace_back(json::object{
+						{"type", "image"},
+						{"data", json::object{
+							{"file", "file:///" + EAT_DIR + "/" + random_file}
+						}}
+						});
+				}
+				params["message"] = message;
 				reply("send_group_msg", params, ws);
 			}
 		}
-		else if (type == "face") {
-		}
-		// 其他消息类型可以在这里继续添加处理逻辑
 	}
 }
 
@@ -66,8 +113,74 @@ static void handle_message(const json::object& obj, websocket::stream<tcp::socke
 	else if (message_type == "group") handle_group_message(obj, ws);
 }
 
+// 处理群文件上传事件
+static void handle_group_upload_notice(const json::object& obj, websocket::stream<tcp::socket>& ws) {
+}
+
+// 处理群管理员变动事件
+static void handle_group_admin_notice(const json::object& obj, websocket::stream<tcp::socket>& ws) {
+}
+
+// 处理群成员减少事件
+static void handle_group_decrease_notice(const json::object& obj, websocket::stream<tcp::socket>& ws) {
+}
+
+// 处理群成员增加事件
+static void handle_group_increase_notice(const json::object& obj, websocket::stream<tcp::socket>& ws) {
+	const auto group_id = obj.at("group_id").as_int64();// 群号
+	const auto user_id = obj.at("user_id").as_int64();// 加入者 QQ 号
+	json::object params;
+	params["group_id"] = group_id;
+	json::array message;
+	message.emplace_back(json::object{
+		{"type", "at"},
+		{"data", json::object{
+			{"qq", user_id}
+		}}
+		});
+	message.emplace_back(json::object{
+		{"type", "text"},
+		{"data", json::object{
+			{"text", "欢迎喵~"}
+		}}
+		});
+	params["message"] = message;
+	reply("send_group_msg", params, ws);
+}
+
+// 处理群禁言事件
+static void handle_group_ban_notice(const json::object& obj, websocket::stream<tcp::socket>& ws) {
+}
+
+// 处理好友添加事件
+static void handle_friend_add_notice(const json::object& obj, websocket::stream<tcp::socket>& ws) {
+}
+
+// 处理群消息撤回事件
+static void handle_group_recall_notice(const json::object& obj, websocket::stream<tcp::socket>& ws) {
+}
+
+// 处理好友消息撤回事件
+static void handle_friend_recall_notice(const json::object& obj, websocket::stream<tcp::socket>& ws) {
+}
+
+// 处理群内戳一戳、群红包运气王、群成员荣誉变更等事件
+static void handle_notify_notice(const json::object& obj, websocket::stream<tcp::socket>& ws) {
+}
+
 // 处理通知事件，包括群成员变动、好友变动等
 static void handle_notice(const json::object& obj, websocket::stream<tcp::socket>& ws) {
+	const std::string notice_type = obj.at("notice_type").as_string().c_str();
+	std::cout << "notice_type: " << notice_type << std::endl;
+	if (notice_type == "group_upload") handle_group_upload_notice(obj, ws);
+	else if (notice_type == "group_admin") handle_group_admin_notice(obj, ws);
+	else if (notice_type == "group_decrease") handle_group_decrease_notice(obj, ws);
+	else if (notice_type == "group_increase") handle_group_increase_notice(obj, ws);
+	else if (notice_type == "group_ban") handle_group_ban_notice(obj, ws);
+	else if (notice_type == "friend_add") handle_friend_add_notice(obj, ws);
+	else if (notice_type == "group_recall") handle_group_recall_notice(obj, ws);
+	else if (notice_type == "friend_recall") handle_friend_recall_notice(obj, ws);
+	else if (notice_type == "notify") handle_notify_notice(obj, ws);
 }
 
 // 处理请求事件，包括加群请求、加好友请求等
