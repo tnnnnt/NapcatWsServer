@@ -20,8 +20,17 @@ namespace net = boost::asio;
 namespace ssl = net::ssl;
 using tcp = net::ip::tcp;
 
+const int64_t ROBOT_QQ = 3777014797; // 替换为你的机器人 QQ 号
 const std::string WORK_DIR = "C:/QQRobot"; // 替换为你的工作目录路径
 const std::string EAT_DIR = WORK_DIR + "/eat"; // 吃什么
+
+// 使用指定 seed 打乱 vector 顺序（原地修改）
+template<typename T>
+static void shuffle_vector(std::vector<T>& v, const int64_t& seed)
+{
+	std::mt19937 rng(seed);
+	std::shuffle(v.begin(), v.end(), rng);
+}
 
 static void get_files(const fs::path& dir_path, std::vector<std::string>& files) {
 	files.clear();
@@ -62,14 +71,41 @@ static void handle_private_message(const json::object& obj, websocket::stream<tc
 static void handle_group_message(const json::object& obj, websocket::stream<tcp::socket> &ws) {
 	const auto time = obj.at("time").as_int64();
 	const auto group_id = obj.at("group_id").as_int64();
+	const auto user_id = obj.at("user_id").as_int64();
 	const auto& message_array = obj.at("message").as_array();
-	for (const auto& seg : message_array) {
-		const auto& seg_obj = seg.as_object();
+	const auto message_size = message_array.size();
+	if (message_size == 1) {
+		const auto& seg_obj = message_array[0].as_object();
 		const std::string type = seg_obj.at("type").as_string().c_str();
 		if (type == "text") {
 			const std::string text = seg_obj.at("data").as_object().at("text").as_string().c_str();
-			if (text.find("吃什么") != std::string::npos)
+			if (text == "/今日运势")
 			{
+				json::object params;
+				params["group_id"] = group_id;
+				json::array message;
+				std::vector<std::string> fortune = {"出行", "交友", "恋爱", "相亲", "工作", "面试", "VRChat", "游戏",
+					"学习", "睡觉", "吃饭", "喝水", "运动", "理财", "打扫卫生", "写代码", "unity", "摸鱼", "买彩票", "请客",
+					"旅行", "结婚", "生孩子", "搬家", "买东西", "看电影", "看书", "水群", "吃瓜"}; // 运势
+				const int64_t seed = time / 86400 + user_id; // 每天每人一个固定的 seed
+				shuffle_vector(fortune, seed);
+				message.emplace_back(json::object{
+					{"type", "at"},
+					{"data", json::object{
+						{"qq", user_id}
+					}}
+					});
+				message.emplace_back(json::object{
+					{"type", "text"},
+					{"data", json::object{
+						{"text", "\n今日运势（仅供娱乐）\n宜：" + fortune[0] + " " + fortune[1] + " " + fortune[2] +
+						"\n忌：" + fortune[3] + " " + fortune[4] + " " + fortune[5] +"\n幸运数字：" + std::to_string(seed % 100)}
+					}}
+					});
+				params["message"] = message;
+				reply("send_group_msg", params, ws);
+			}
+			else if (text.find("吃什么") != std::string::npos) {
 				std::vector<std::string> files;
 				get_files(EAT_DIR, files);
 				json::object params;
