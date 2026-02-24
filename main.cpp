@@ -26,9 +26,10 @@ const std::string EAT_DIR = WORK_DIR + "/eat"; // 吃什么
 
 // 使用指定 seed 打乱 vector 顺序（原地修改）
 template<typename T>
-static void shuffle_vector(std::vector<T>& v, const int64_t& seed)
+static void shuffle_vector(std::vector<T>& v, int& luckey_num, const int64_t& seed)
 {
 	std::mt19937 rng(seed);
+	luckey_num = rng() % 100;
 	std::shuffle(v.begin(), v.end(), rng);
 }
 
@@ -88,7 +89,8 @@ static void handle_group_message(const json::object& obj, websocket::stream<tcp:
 					"学习", "睡觉", "吃饭", "喝水", "运动", "理财", "打扫卫生", "写代码", "unity", "摸鱼", "买彩票", "请客",
 					"旅行", "结婚", "生孩子", "搬家", "买东西", "看电影", "看书", "水群", "吃瓜"}; // 运势
 				const int64_t seed = time / 86400 + user_id; // 每天每人一个固定的 seed
-				shuffle_vector(fortune, seed);
+				int luckey_num;
+				shuffle_vector(fortune, luckey_num, seed);
 				message.emplace_back(json::object{
 					{"type", "at"},
 					{"data", json::object{
@@ -99,7 +101,7 @@ static void handle_group_message(const json::object& obj, websocket::stream<tcp:
 					{"type", "text"},
 					{"data", json::object{
 						{"text", "\n今日运势（仅供娱乐）\n宜：" + fortune[0] + " " + fortune[1] + " " + fortune[2] +
-						"\n忌：" + fortune[3] + " " + fortune[4] + " " + fortune[5] +"\n幸运数字：" + std::to_string(seed % 100)}
+						"\n忌：" + fortune[3] + " " + fortune[4] + " " + fortune[5] +"\n幸运数字：" + std::to_string(luckey_num)}
 					}}
 					});
 				params["message"] = message;
@@ -177,7 +179,7 @@ static void handle_group_increase_notice(const json::object& obj, websocket::str
 	message.emplace_back(json::object{
 		{"type", "text"},
 		{"data", json::object{
-			{"text", "欢迎喵~"}
+			{"text", " 欢迎喵~"}
 		}}
 		});
 	params["message"] = message;
