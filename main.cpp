@@ -40,7 +40,7 @@ static void get_files(const fs::path& dir_path, std::vector<std::string>& files)
 	}
 	for (const auto& entry : fs::directory_iterator(dir_path)) {
 		if (entry.is_regular_file()) {
-			files.push_back(entry.path().filename().string());
+			files.push_back(entry.path().filename().u8string());
 		}
 	}
 }
