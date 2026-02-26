@@ -70,7 +70,7 @@ static void handle_private_message(const json::object& obj, websocket::stream<tc
 
 // 处理群消息
 static void handle_group_message(const json::object& obj, websocket::stream<tcp::socket> &ws) {
-	const auto time = obj.at("time").as_int64();
+	const auto time = obj.at("time").as_int64() + 28800; // 转为北京时间
 	const auto group_id = obj.at("group_id").as_int64();
 	const auto user_id = obj.at("user_id").as_int64();
 	const auto& message_array = obj.at("message").as_array();
