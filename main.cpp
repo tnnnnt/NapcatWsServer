@@ -87,7 +87,8 @@ static void handle_group_message(const json::object& obj, websocket::stream<tcp:
 				json::array message;
 				std::vector<std::string> fortune = {"出行", "交友", "恋爱", "相亲", "工作", "面试", "VRChat", "游戏",
 					"学习", "睡觉", "吃饭", "喝水", "运动", "理财", "打扫卫生", "写代码", "unity", "摸鱼", "买彩票", "请客",
-					"旅行", "结婚", "生孩子", "搬家", "买东西", "看电影", "看书", "水群", "吃瓜"}; // 运势
+					"旅行", "结婚", "生孩子", "搬家", "买东西", "看电影", "看书", "水群", "吃瓜", "遛狗", "遛猫", "钓鱼",
+					"打台球", "打麻将", "KTV"}; // 运势
 				const int64_t seed = time / 86400 + user_id; // 每天每人一个固定的 seed
 				int luckey_num;
 				shuffle_vector(fortune, luckey_num, seed);
@@ -136,6 +137,22 @@ static void handle_group_message(const json::object& obj, websocket::stream<tcp:
 						}}
 						});
 				}
+				params["message"] = message;
+				reply("send_group_msg", params, ws);
+			}
+		}
+		else if (type == "at") {
+			const int64_t qq = seg_obj.at("data").as_object().at("qq").as_int64();
+			if (qq == ROBOT_QQ) {
+				json::object params;
+				params["group_id"] = group_id;
+				json::array message;
+				message.emplace_back(json::object{
+					{"type", "text"},
+					{"data", json::object{
+						{"text", "干什么！"}
+					}}
+					});
 				params["message"] = message;
 				reply("send_group_msg", params, ws);
 			}
