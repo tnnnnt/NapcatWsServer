@@ -53,7 +53,7 @@ static std::string remove_extension(const std::string& filename) {
 
 // 做出响应
 static void reply(const std::string& action, const json& params, websocket::stream<tcp::socket>& ws) {
-	json reply;
+	json reply{};
 	reply["action"] = action;
 	reply["params"] = params;
 	ws.write(net::buffer(reply.dump()));
@@ -61,10 +61,16 @@ static void reply(const std::string& action, const json& params, websocket::stre
 
 // 处理私聊消息
 static void handle_private_message(const json& obj, websocket::stream<tcp::socket>& ws) {
-	json params;
+	json params{};
 	params["user_id"] = obj.at("user_id");
 	params["message"] = "暂时不支持私聊，请催促tnt更新";
 	reply("send_private_msg", params, ws);
+}
+
+// 判断字符串是否仅包含空格
+static bool is_only_spaces(const std::string& s)
+{
+	return !s.empty() && std::all_of(s.begin(), s.end(), [](char c) { return c == ' '; });
 }
 
 // 处理群消息
@@ -76,12 +82,12 @@ static void handle_group_message(const json& obj, websocket::stream<tcp::socket>
 	const auto message_size = message_array.size();
 	if (message_size == 1) {
 		const auto& seg_obj = message_array[0];
-		const std::string type = seg_obj.at("type").get<std::string>().c_str();
+		const std::string type = seg_obj.at("type").get<std::string>();
 		if (type == "text") {
-			const std::string text = seg_obj.at("data").at("text").get<std::string>().c_str();
-			if (text == "/今日运势")
+			const std::string text = seg_obj.at("data").at("text").get<std::string>();
+			if (text == "今日运势")
 			{
-				json params;
+				json params{};
 				params["group_id"] = group_id;
 				json message = json::array();
 				std::vector<std::string> fortune = {"出行", "交友", "恋爱", "相亲", "工作", "面试", "VRChat", "游戏",
@@ -110,7 +116,7 @@ static void handle_group_message(const json& obj, websocket::stream<tcp::socket>
 			else if (text.find("吃什么") != std::string::npos) {
 				std::vector<std::string> files;
 				get_files(EAT_DIR, files);
-				json params;
+				json params{};
 				params["group_id"] = group_id;
 				json message = json::array();
 				if (files.empty()) {
@@ -141,9 +147,9 @@ static void handle_group_message(const json& obj, websocket::stream<tcp::socket>
 			}
 		}
 		else if (type == "at") {
-			const int64_t qq = seg_obj.at("data").at("qq").get<int64_t>();
+			const int64_t qq = std::stoll(seg_obj.at("data").at("qq").get<std::string>());
 			if (qq == ROBOT_QQ) {
-				json params;
+				json params{};
 				params["group_id"] = group_id;
 				json message = json::array();
 				message.emplace_back(json{
@@ -157,11 +163,38 @@ static void handle_group_message(const json& obj, websocket::stream<tcp::socket>
 			}
 		}
 	}
+	else if (message_size == 2) {
+		const auto& seg_obj0 = message_array[0];
+		const std::string type0 = seg_obj0.at("type").get<std::string>();
+		const auto& seg_obj1 = message_array[1];
+		const std::string type1 = seg_obj1.at("type").get<std::string>();
+		if (type0 == "at") {
+			const int64_t qq = std::stoll(seg_obj0.at("data").at("qq").get<std::string>());
+			if (qq == ROBOT_QQ) {
+				if (type1 == "text") {
+					const std::string text = seg_obj1.at("data").at("text").get<std::string>();
+					if (is_only_spaces(text)) {
+						json params{};
+						params["group_id"] = group_id;
+						json message = json::array();
+						message.emplace_back(json{
+							{"type", "text"},
+							{"data", json{
+								{"text", "干什么！"}
+							}}
+							});
+						params["message"] = message;
+						reply("send_group_msg", params, ws);
+					}
+				}
+			}
+		}
+	}
 }
 
 // 处理消息事件，包括私聊消息、群消息等
 static void handle_message(const json& obj, websocket::stream<tcp::socket>& ws) {
-	const std::string message_type = obj.at("message_type").get<std::string>().c_str();
+	const std::string message_type = obj.at("message_type").get<std::string>();
 	std::cout << "message_type: " << message_type << std::endl;
 	if (message_type == "private") handle_private_message(obj, ws);
 	else if (message_type == "group") handle_group_message(obj, ws);
@@ -183,7 +216,7 @@ static void handle_group_decrease_notice(const json& obj, websocket::stream<tcp:
 static void handle_group_increase_notice(const json& obj, websocket::stream<tcp::socket>& ws) {
 	const auto group_id = obj.at("group_id").get<int64_t>();// 群号
 	const auto user_id = obj.at("user_id").get<int64_t>();// 加入者 QQ 号
-	json params;
+	json params{};
 	params["group_id"] = group_id;
 	json message = json::array();
 	message.emplace_back(json{
@@ -224,7 +257,7 @@ static void handle_notify_notice(const json& obj, websocket::stream<tcp::socket>
 
 // 处理通知事件，包括群成员变动、好友变动等
 static void handle_notice(const json& obj, websocket::stream<tcp::socket>& ws) {
-	const std::string notice_type = obj.at("notice_type").get<std::string>().c_str();
+	const std::string notice_type = obj.at("notice_type").get<std::string>();
 	std::cout << "notice_type: " << notice_type << std::endl;
 	if (notice_type == "group_upload") handle_group_upload_notice(obj, ws);
 	else if (notice_type == "group_admin") handle_group_admin_notice(obj, ws);
@@ -247,7 +280,7 @@ static void handle_meta_event(const json& obj, websocket::stream<tcp::socket>& w
 
 // 处理事件
 static void handle_event(const json& obj, websocket::stream<tcp::socket>& ws) {
-	const std::string post_type = obj.contains("post_type") ? obj.at("post_type").get<std::string>().c_str() : "";
+	const std::string post_type = obj.contains("post_type") ? obj.at("post_type").get<std::string>() : "";
 	if (post_type == "message") handle_message(obj, ws);
 	else if (post_type == "notice") handle_notice(obj, ws);
 	else if (post_type == "request") handle_request(obj, ws);
