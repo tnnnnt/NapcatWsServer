@@ -4,7 +4,7 @@
 
 WebSocketServer::WebSocketServer(int port) : port_(port) {}
 
-void WebSocketServer::start(SessionHandler handler) const {
+void WebSocketServer::start(SessionHandler handler) {
 
 	net::io_context ioc{ 1 };
 	tcp::acceptor acceptor{ ioc, {tcp::v4(), port_} };

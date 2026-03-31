@@ -14,7 +14,7 @@ public:
 
 	WebSocketServer(int port);
 
-	void start(SessionHandler handler) const;
+	void start(SessionHandler handler);
 
 private:
 	int port_;

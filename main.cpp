@@ -1,5 +1,6 @@
 ﻿#include "net/websocket_server.h"
 #include "core/bot_client.h"
+#include <iostream>
 
 int main() {
 	WebSocketServer server(8080);
