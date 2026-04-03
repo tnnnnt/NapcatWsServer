@@ -93,18 +93,18 @@ void BotClient::sender_loop() {
 			send_queue_.pop();
 		}
 		try {
+			//限速（核心）
+			const int base = 200;                 // 200ms
+			const int jitter = rand() % 300;      // 0~300ms
+			std::this_thread::sleep_for(
+				std::chrono::milliseconds(base + jitter)
+			);
 			std::lock_guard<std::mutex> lock(ws_mutex_);
 			ws_.write(boost::asio::buffer(msg.dump()));
 		}
 		catch (std::exception& e) {
 			std::cout << "send error: " << e.what() << std::endl;
 		}
-		//限速（核心）
-		const int base = 300;                 // 300ms
-		const int jitter = rand() % 2000;      // 0~2000ms
-		std::this_thread::sleep_for(
-			std::chrono::milliseconds(base + jitter)
-		);
 	}
 }
 
