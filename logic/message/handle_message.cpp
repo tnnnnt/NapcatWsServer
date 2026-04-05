@@ -80,6 +80,36 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 					params["message"] = message;
 					api("send_group_msg", params);
 				}
+				else if (text == "今日老公")
+				{
+					std::lock_guard<std::mutex> lock(common::group_members_mutex);
+					const auto group_member_num = common::group_members[group_id].size();
+					const int64_t wife_id = common::group_members[group_id][(seed * seed) % group_member_num];
+					const std::string wife_name = api("get_group_member_info", json{ {"group_id", std::to_string(group_id)}, { "user_id", std::to_string(wife_id) } })["data"].at("nickname").get<std::string>();
+					json params{};
+					params["group_id"] = group_id;
+					json message = json::array();
+					message.emplace_back(json{
+						{"type", "at"},
+						{"data", json{
+							{"qq", user_id}
+						}}
+						});
+					message.emplace_back(json{
+						{"type", "text"},
+						{"data", json{
+							{"text", "\n你的今日老公是【" + wife_name + "】\n请好好对待他哦~"}
+						}}
+						});
+					message.emplace_back(json{
+						{"type", "image"},
+						{"data", json{
+							{"file", "https://q.qlogo.cn/g?b=qq&nk=" + std::to_string(wife_id) + "&s=160"}
+						}}
+						});
+					params["message"] = message;
+					api("send_group_msg", params);
+				}
 				else if (text.find("吃什么") != std::string::npos || text.find("吃啥") != std::string::npos) {
 					std::vector<std::string> files;
 					common::get_files(common::EAT_DIR, files);
