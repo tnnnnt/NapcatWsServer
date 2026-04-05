@@ -23,28 +23,29 @@ public:
 private:
 	websocket::stream<tcp::socket> ws_;
 
-	//线程
+	//绾跨▼
 	std::thread reader_;
 	std::vector<std::thread> workers_;
 	std::thread sender_;
+	std::thread schedule_midnight_task_;
 
 	std::atomic<bool> running_{ true };
 
-	//事件队列
+	//浜嬩欢闃熷垪
 	std::queue<json> event_queue_;
 	std::mutex queue_mutex_;
 	std::condition_variable cv_;
 
-	//API响应管理
+	//API鍝嶅簲绠＄悊
 	std::map<std::string, std::promise<json>> pending_;
 	std::mutex api_mutex_;
 
-	//发送队列（限速核心）
+	//鍙戦�侀槦鍒楋紙闄愰�熸牳蹇冿級
 	std::queue<json> send_queue_;
 	std::mutex send_queue_mutex_;
 	std::condition_variable send_cv_;
 
-	//WebSocket写锁（必须）
+	//WebSocket鍐欓攣锛堝繀椤伙級
 	std::mutex ws_mutex_;
 
 	int echo_id_ = 0;
@@ -52,8 +53,9 @@ private:
 	void read_loop();
 	void worker_loop();
 	void sender_loop();
-	void handle_message(const json& j);
+	void handle_post(const json& j);
 	void enqueue_send(const json& j);
 	std::string gen_echo();
 	json call_api(const std::string&, const json&);
+	void schedule_midnight_task_loop();
 };

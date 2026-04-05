@@ -13,9 +13,10 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 	}
 	else if (message_type == "group") {
 		const auto time = event.at("time").get<int64_t>() + 28800; // 转为北京时间
-		const auto group_id = event.at("group_id").get<int64_t>();
+		const int64_t group_id = event.at("group_id").get<int64_t>();
 		const auto user_id = event.at("user_id").get<int64_t>();
 		const auto& message_array = event.at("message");
+		const int64_t seed = time / 86400 + user_id; // 每天每人一个固定的 seed
 		const auto message_size = message_array.size();
 		if (message_size == 1) {
 			const auto& seg_obj = message_array[0];
@@ -29,9 +30,8 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 					json message = json::array();
 					std::vector<std::string> fortune = { "出行", "交友", "恋爱", "相亲", "工作", "面试", "VRChat", "游戏",
 						"学习", "睡觉", "吃饭", "喝水", "运动", "理财", "打扫卫生", "写代码", "unity", "摸鱼", "买彩票", "请客",
-						"旅行", "结婚", "生孩子", "搬家", "买东西", "看电影", "看书", "水群", "吃瓜", "遛狗", "遛猫", "钓鱼",
-						"打台球", "打麻将", "KTV" }; // 运势
-					const int64_t seed = time / 86400 + user_id; // 每天每人一个固定的 seed
+						"旅行", "结婚", "生孩子", "搬家", "购物", "看电影", "看书", "水群", "吃瓜", "遛狗", "遛猫", "钓鱼",
+						"打台球", "打麻将", "KTV", "跳舞", "blender", "打篮球", "羽毛球", "面基", "骑行", "游泳", "加班"}; // 运势
 					int luckey_num;
 					common::shuffle_vector(fortune, luckey_num, seed);
 					message.emplace_back(json{
@@ -50,7 +50,37 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 					params["message"] = message;
 					api("send_group_msg", params);
 				}
-				else if (text.find("吃什么") != std::string::npos) {
+				else if (text == "今日老婆")
+				{
+					std::lock_guard<std::mutex> lock(common::group_members_mutex);
+					const auto group_member_num = common::group_members[group_id].size();
+					const int64_t wife_id = common::group_members[group_id][seed % group_member_num];
+					const std::string wife_name = api("get_group_member_info", json{ {"group_id", std::to_string(group_id)}, { "user_id", std::to_string(wife_id) } })["data"].at("nickname").get<std::string>();
+					json params{};
+					params["group_id"] = group_id;
+					json message = json::array();
+					message.emplace_back(json{
+						{"type", "at"},
+						{"data", json{
+							{"qq", user_id}
+						}}
+						});
+					message.emplace_back(json{
+						{"type", "text"},
+						{"data", json{
+							{"text", "\n你的今日老婆是【" + wife_name + "】\n请好好对待她哦~"}
+						}}
+						});
+					message.emplace_back(json{
+						{"type", "image"},
+						{"data", json{
+							{"file", "https://q.qlogo.cn/g?b=qq&nk=" + std::to_string(wife_id) + "&s=160"}
+						}}
+						});
+					params["message"] = message;
+					api("send_group_msg", params);
+				}
+				else if (text.find("吃什么") != std::string::npos || text.find("吃啥") != std::string::npos) {
 					std::vector<std::string> files;
 					common::get_files(common::EAT_DIR, files);
 					json params{};

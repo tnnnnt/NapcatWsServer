@@ -9,4 +9,5 @@ public:
 	using ApiFunc = std::function<json(const std::string&, const json&)>;
 
 	static void handle(const json& event, ApiFunc api);
+	static void daily(ApiFunc api);
 };

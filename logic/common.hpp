@@ -1,33 +1,37 @@
-#pragma once
+ï»¿#pragma once
 #include <algorithm>
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>
+#include <mutex>
 #include <random>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <vector>
 
 namespace fs = std::filesystem;
 
 namespace common
 {
-	inline constexpr int64_t ROBOT_QQ = 3777014797; // Ìæ»»ÎªÄãµÄ»úÆ÷ÈË QQ ºÅ
-	inline const std::string WORK_DIR = "/home/bot/qq_robot"; // Ìæ»»ÎªÄãµÄ¹¤×÷Ä¿Â¼Â·¾¶
-	inline const std::string EAT_DIR = WORK_DIR + "/eat"; // ³ÔÊ²Ã´
-	// ÅĞ¶Ï×Ö·û´®ÊÇ·ñ½ö°üº¬¿Õ¸ñ
+	inline constexpr int64_t ROBOT_QQ = 3777014797; // æ›¿æ¢ä¸ºä½ çš„æœºå™¨äºº QQ å·
+	inline const std::string WORK_DIR = "/home/bot/qq_robot"; // æ›¿æ¢ä¸ºä½ çš„å·¥ä½œç›®å½•è·¯å¾„
+	inline const std::string EAT_DIR = WORK_DIR + "/eat"; // åƒä»€ä¹ˆ
+	inline std::unordered_map<int64_t, std::vector<int64_t>> group_members; // ç¾¤æˆå‘˜åˆ—è¡¨
+	inline std::mutex group_members_mutex; // ä¿æŠ¤ group_members çš„äº’æ–¥é”
+	// åˆ¤æ–­å­—ç¬¦ä¸²æ˜¯å¦ä»…åŒ…å«ç©ºæ ¼
 	inline bool is_only_spaces(const std::string& s)
 	{
 		return !s.empty() && std::all_of(s.begin(), s.end(), [](char c) { return c == ' '; });
 	}
-	// È¥µôºó×º
+	// å»æ‰åç¼€
 	inline std::string remove_extension(const std::string& filename) {
 		const std::size_t pos = filename.find_last_of('.');
 		if (pos == std::string::npos)
 			return filename;
 		return filename.substr(0, pos);
 	}
-	// »ñÈ¡Ä¿Â¼ÖĞËùÓĞÎÄ¼ş
+	// è·å–ç›®å½•ä¸­æ‰€æœ‰æ–‡ä»¶
 	inline void get_files(const fs::path& dir_path, std::vector<std::string>& files) {
 		files.clear();
 		if (!fs::exists(dir_path) || !fs::is_directory(dir_path)) {
@@ -39,7 +43,7 @@ namespace common
 			}
 		}
 	}
-	// Ê¹ÓÃÖ¸¶¨ seed ´òÂÒ vector Ë³Ğò£¨Ô­µØĞŞ¸Ä£©
+	// ä½¿ç”¨æŒ‡å®š seed æ‰“ä¹± vector é¡ºåºï¼ˆåŸåœ°ä¿®æ”¹ï¼‰
 	template<typename T>
 	inline void shuffle_vector(std::vector<T>& v, int& luckey_num, const int64_t& seed)
 	{
