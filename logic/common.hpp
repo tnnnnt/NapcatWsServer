@@ -15,10 +15,17 @@ namespace fs = std::filesystem;
 namespace common
 {
 	inline constexpr int64_t ROBOT_QQ = 3777014797; // 替换为你的机器人 QQ 号
+	inline constexpr int64_t ADMIN_QQ = 2324141281; // 替换为管理员 QQ 号
 	inline const std::string WORK_DIR = "/home/bot/qq_robot"; // 替换为你的工作目录路径
 	inline const std::string EAT_DIR = WORK_DIR + "/eat"; // 吃什么
-	inline std::unordered_map<int64_t, std::vector<int64_t>> group_members; // 群成员列表
+	inline const size_t RANK_SIZE = 20; // 排行榜大小
+	inline std::unordered_map<int64_t, std::vector<int64_t>>group_members; // 群成员列表
 	inline std::mutex group_members_mutex; // 保护 group_members 的互斥锁
+	inline std::unordered_map<int64_t, std::unordered_map<int64_t, int>>yesterday_group_member_message_number; // 昨日群成员发言数
+	inline std::unordered_map<int64_t, std::unordered_map<int64_t, int>>today_group_member_message_number; // 今日群成员发言数
+	inline std::unordered_map<int64_t, std::vector<std::pair<int64_t, int>>>yesterday_group_member_message_rank; // 昨日群成员发言数排行榜（按发言数从多到少排序，每个群最多20个）
+	inline std::mutex group_member_message_number_mutex; // 保护 group_member_message_number 的互斥锁
+
 	// 判断字符串是否仅包含空格
 	inline bool is_only_spaces(const std::string& s)
 	{

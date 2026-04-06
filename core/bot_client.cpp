@@ -31,16 +31,18 @@ void BotClient::start() {
 }
 
 void BotClient::read_loop() {
+	std::string msg;
 	while (running_) {
 		try {
 			boost::beast::flat_buffer buffer;
 			ws_.read(buffer);
-			std::string msg = boost::beast::buffers_to_string(buffer.data());
+			msg = boost::beast::buffers_to_string(buffer.data());
 			json j = json::parse(msg);
 			handle_post(j);
 		}
 		catch (std::exception& e) {
 			std::cout << "read error: " << e.what() << std::endl;
+			std::cout << "msg: \n" << msg << std::endl;
 			running_ = false;
 		}
 	}
@@ -97,8 +99,8 @@ void BotClient::sender_loop() {
 		}
 		try {
 			//限速（核心）
-			const int base = 200;                 // 200ms
-			const int jitter = rand() % 300;      // 0~300ms
+			const int base = 1000;                 // 1000ms
+			const int jitter = rand() % 10000;      // 0~10000ms
 			std::this_thread::sleep_for(
 				std::chrono::milliseconds(base + jitter)
 			);
