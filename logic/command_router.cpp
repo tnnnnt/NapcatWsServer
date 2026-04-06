@@ -10,8 +10,10 @@ void CommandRouter::handle(const json& event, ApiFunc api) {
 	const std::string post_type = event.at("post_type").get<std::string>();
 	if (post_type == "message") HandleMessage::start(event, api);
 	else if (post_type == "notice") HandleNotice::start(event, api);
-	else if (post_type == "request"){}
-	else if (post_type == "meta_event"){}
+	else if (post_type == "request") {}
+	else if (post_type == "meta_event"){
+		std::cout << event.dump() << std::endl;
+	}
 }
 void CommandRouter::daily(ApiFunc api) {
 	{
