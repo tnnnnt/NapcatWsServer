@@ -18,6 +18,7 @@ namespace common
 	inline constexpr int64_t ADMIN_QQ = 2324141281; // 替换为管理员 QQ 号
 	inline const std::string WORK_DIR = "/home/bot/qq_robot"; // 替换为你的工作目录路径
 	inline const std::string EAT_DIR = WORK_DIR + "/eat"; // 吃什么
+	inline const std::string DRINK_DIR = WORK_DIR + "/drink"; // 喝什么
 	inline const size_t RANK_SIZE = 20; // 排行榜大小
 	inline std::unordered_map<int64_t, std::vector<int64_t>>group_members; // 群成员列表
 	inline std::mutex group_members_mutex; // 保护 group_members 的互斥锁

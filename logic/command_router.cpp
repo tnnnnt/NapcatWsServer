@@ -11,9 +11,7 @@ void CommandRouter::handle(const json& event, ApiFunc api) {
 	if (post_type == "message") HandleMessage::start(event, api);
 	else if (post_type == "notice") HandleNotice::start(event, api);
 	else if (post_type == "request") {}
-	else if (post_type == "meta_event"){
-		std::cout << event.dump() << std::endl;
-	}
+	else if (post_type == "meta_event") {}
 }
 void CommandRouter::daily(ApiFunc api) {
 	{

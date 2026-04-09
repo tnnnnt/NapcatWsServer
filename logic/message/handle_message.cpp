@@ -278,6 +278,38 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 					params["message"] = message;
 					api("send_group_msg", params);
 				}
+				else if (text.find("喝什么") != std::string::npos || text.find("喝啥") != std::string::npos) {
+					std::vector<std::string> files;
+					common::get_files(common::DRINK_DIR, files);
+					json params{};
+					params["group_id"] = group_id;
+					json message = json::array();
+					if (files.empty()) {
+						message.emplace_back(json{
+							{"type", "text"},
+							{"data", json{
+								{"text", "别喝"}
+							}}
+							});
+					}
+					else {
+						const std::string random_file = files[time % files.size()];
+						message.emplace_back(json{
+							{"type", "text"},
+							{"data", json{
+								{"text", "推荐" + common::remove_extension(random_file)}
+							}}
+							});
+						message.emplace_back(json{
+							{"type", "image"},
+							{"data", json{
+								{"file", "file:///" + common::DRINK_DIR + "/" + random_file}
+							}}
+							});
+					}
+					params["message"] = message;
+					api("send_group_msg", params);
+				}
 			}
 			else if (type == "at") {
 				const int64_t qq = std::stoll(seg_obj.at("data").at("qq").get<std::string>());
