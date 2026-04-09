@@ -7,8 +7,8 @@ void HandleNotice::start(const json& event, std::function<json(const std::string
 	else if (notice_type == "group_admin") {}
 	else if (notice_type == "group_decrease") {}
 	else if (notice_type == "group_increase") {
-		const auto group_id = event.at("group_id").get<int64_t>();// ÈººÅ
-		const auto user_id = event.at("user_id").get<int64_t>();// ¼ÓÈëÕß QQ ºÅ
+		const auto group_id = event.at("group_id").get<int64_t>();// ç¾¤å·
+		const auto user_id = event.at("user_id").get<int64_t>();// åŠ å…¥è€… QQ å·
 		json params{};
 		params["group_id"] = group_id;
 		json message = json::array();
@@ -21,7 +21,7 @@ void HandleNotice::start(const json& event, std::function<json(const std::string
 		message.emplace_back(json{
 			{"type", "text"},
 			{"data", json{
-				{"text", " »¶Ó­ß÷~°®Äãß÷~"}
+				{"text", " æ¬¢è¿å–µ~çˆ±ä½ å–µ~"}
 			}}
 			});
 		params["message"] = message;

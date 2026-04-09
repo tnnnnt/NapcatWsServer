@@ -23,7 +23,7 @@ BotClient::~BotClient() {
 
 void BotClient::start() {
 	reader_ = std::thread([this]() { read_loop(); });
-	for (int i = 0; i < 4; ++i)
+	for (int i = 0; i < 1; ++i)
 		workers_.emplace_back([this]() { worker_loop(); });
 	//启动发送线程（限速核心）
 	sender_ = std::thread([this]() { sender_loop(); });
@@ -98,18 +98,19 @@ void BotClient::sender_loop() {
 			send_queue_.pop();
 		}
 		try {
-			//限速（核心）
-			const int base = 1000;                 // 1000ms
-			const int jitter = rand() % 10000;      // 0~10000ms
-			std::this_thread::sleep_for(
-				std::chrono::milliseconds(base + jitter)
-			);
+			if (msg["action"] == "send_private_msg" || msg["action"] == "send_group_msg" || msg["action"] == "send_msg") {
+				//限速（核心）
+				const int base = 3000;                 // 3000ms
+				const int jitter = rand() % 7000;      // 0~7000ms
+				std::this_thread::sleep_for(
+					std::chrono::milliseconds(base + jitter)
+				);
+			}
 			std::lock_guard<std::mutex> lock(ws_mutex_);
 			ws_.write(boost::asio::buffer(msg.dump()));
 		}
 		catch (std::exception& e) {
 			std::cout << "send error: " << e.what() << std::endl;
-			std::cout << "msg.dump(): \n" << msg.dump() << std::endl;
 		}
 	}
 }
