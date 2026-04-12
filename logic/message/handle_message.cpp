@@ -12,16 +12,17 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 		api("send_private_msg", params);
 	}
 	else if (message_type == "group") {
-		const auto time = event.at("time").get<int64_t>() + 28800; // 转为北京时间
+		const auto time = event.at("time").get<int64_t>() + common::TIME_ZONE_OFFSET; // 转为北京时间
 		const int64_t group_id = event.at("group_id").get<int64_t>();
 		const int64_t user_id = event.at("user_id").get<int64_t>();
 		{
-			std::lock_guard<std::mutex> lock(common::group_member_message_number_mutex);
+			std::lock_guard<std::mutex> lock(common::today_group_member_message_number_mutex);
 			++common::today_group_member_message_number[group_id][user_id];
 		}
 		const auto& message_array = event.at("message");
 		const int64_t seed = time / 86400 + user_id; // 每天每人一个固定的 seed
 		const auto message_size = message_array.size();
+		int luckey_num;
 		if (message_size == 1) {
 			const auto& seg_obj = message_array[0];
 			const std::string type = seg_obj.at("type").get<std::string>();
@@ -36,7 +37,6 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 						"学习", "睡觉", "吃饭", "喝水", "运动", "理财", "打扫卫生", "写代码", "unity", "摸鱼", "买彩票", "请客",
 						"旅行", "结婚", "生孩子", "搬家", "购物", "看电影", "看书", "水群", "吃瓜", "遛狗", "遛猫", "钓鱼",
 						"打台球", "打麻将", "KTV", "跳舞", "blender", "打篮球", "羽毛球", "面基", "骑行", "游泳", "加班"}; // 运势
-					int luckey_num;
 					common::shuffle_vector(fortune, luckey_num, seed);
 					message.emplace_back(json{
 						{"type", "at"},
@@ -54,16 +54,20 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 					params["message"] = message;
 					api("send_group_msg", params);
 				}
-				else if (text == "今日老婆")
+				else if (text == "今日老婆" || text == "今日老公" || text == "今日妈妈")
 				{
-					size_t group_member_num;
-					int64_t wife_id;
+					std::vector<int64_t>temp;
 					{
 						std::lock_guard<std::mutex> lock(common::group_members_mutex);
-						group_member_num = common::group_members[group_id].size();
-						wife_id = common::group_members[group_id][seed % group_member_num];
+						temp = common::group_members[group_id];
 					}
-					const std::string wife_name = api("get_group_member_info", json{ {"group_id", std::to_string(group_id)}, { "user_id", std::to_string(wife_id) } })["data"].at("nickname").get<std::string>();
+					common::shuffle_vector(temp, luckey_num, seed);
+					int64_t match_id;
+					if (text == "今日老婆")match_id = temp[0];
+					else if (text == "今日老公")match_id = temp[1];
+					else if (text == "今日妈妈")match_id = temp[2];
+
+					const std::string match_name = api("get_group_member_info", json{ {"group_id", std::to_string(group_id)}, { "user_id", std::to_string(match_id) } })["data"].at("nickname").get<std::string>();
 					json params{};
 					params["group_id"] = group_id;
 					json message = json::array();
@@ -73,56 +77,23 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 							{"qq", user_id}
 						}}
 						});
+					const std::string last_sentence = (text == "今日老婆") ? "请好好对待她哦~" : (text == "今日老公") ? "请好好对待他哦~" : "快去叫妈妈！";
 					message.emplace_back(json{
 						{"type", "text"},
 						{"data", json{
-							{"text", "\n你的今日老婆是【" + wife_name + "】\n请好好对待她哦~"}
+							{"text", "\n你的" + text + "是【" + match_name + "】\n" + last_sentence}
 						}}
 						});
 					message.emplace_back(json{
 						{"type", "image"},
 						{"data", json{
-							{"file", "https://q.qlogo.cn/g?b=qq&nk=" + std::to_string(wife_id) + "&s=4"}
+							{"file", "https://q.qlogo.cn/g?b=qq&nk=" + std::to_string(match_id) + "&s=4"}
 						}}
 						});
 					params["message"] = message;
 					api("send_group_msg", params);
 				}
-				else if (text == "今日老公")
-				{
-					size_t group_member_num;
-					int64_t husband_id;
-					{
-						std::lock_guard<std::mutex> lock(common::group_members_mutex);
-						group_member_num = common::group_members[group_id].size();
-						husband_id = common::group_members[group_id][seed * seed % group_member_num];
-					}
-					const std::string husband_name = api("get_group_member_info", json{ {"group_id", std::to_string(group_id)}, { "user_id", std::to_string(husband_id) } })["data"].at("nickname").get<std::string>();
-					json params{};
-					params["group_id"] = group_id;
-					json message = json::array();
-					message.emplace_back(json{
-						{"type", "at"},
-						{"data", json{
-							{"qq", user_id}
-						}}
-						});
-					message.emplace_back(json{
-						{"type", "text"},
-						{"data", json{
-							{"text", "\n你的今日老公是【" + husband_name + "】\n请好好对待他哦~"}
-						}}
-						});
-					message.emplace_back(json{
-						{"type", "image"},
-						{"data", json{
-							{"file", "https://q.qlogo.cn/g?b=qq&nk=" + std::to_string(husband_id) + "&s=4"}
-						}}
-						});
-					params["message"] = message;
-					api("send_group_msg", params);
-				}
-				else if (text == "今日龙王榜" || text == "昨日龙王榜") {
+				else if (text == "今日龙王榜") {
 					json params{};
 					params["group_id"] = group_id;
 					json message = json::array();
@@ -133,24 +104,18 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 						}}
 						});
 					std::vector<std::pair<int64_t, int>>member_message_rank;
-					if (text == "今日龙王榜") {
-						std::lock_guard<std::mutex> lock(common::group_member_message_number_mutex);
+					{
+						std::lock_guard<std::mutex> lock(common::today_group_member_message_number_mutex);
 						const auto& member_message_number = common::today_group_member_message_number[group_id];
 						member_message_rank.insert(member_message_rank.end(), member_message_number.begin(), member_message_number.end());
 					}
-					else if (text == "昨日龙王榜") {
-						std::lock_guard<std::mutex> lock(common::group_member_message_number_mutex);
-						member_message_rank = common::yesterday_group_member_message_rank[group_id];
-					}
 					const size_t k = std::min(common::RANK_SIZE, member_message_rank.size());
-					if (text == "今日龙王榜") {
-						std::partial_sort(
-							member_message_rank.begin(), member_message_rank.begin() + k, member_message_rank.end(),
-							[](const std::pair<int64_t, int>& a, const std::pair<int64_t, int>& b)
-							{
-								return a.second > b.second; // 按 value 降序
-							});
-					}
+					std::partial_sort(
+						member_message_rank.begin(), member_message_rank.begin() + k, member_message_rank.end(),
+						[](const std::pair<int64_t, int>& a, const std::pair<int64_t, int>& b)
+						{
+							return a.second > b.second; // 按 value 降序
+						});
 					for (size_t i = 0; i < k; ++i) {
 						const int64_t user_id = member_message_rank[i].first;
 						const int message_num = member_message_rank[i].second;
@@ -197,7 +162,7 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 							});
 						std::vector<std::pair<int64_t, int>>member_message_rank;
 						{
-							std::lock_guard<std::mutex> lock(common::group_member_message_number_mutex);
+							std::lock_guard<std::mutex> lock(common::today_group_member_message_number_mutex);
 							const auto& member_message_number = common::today_group_member_message_number[group_id];
 							member_message_rank.insert(member_message_rank.end(), member_message_number.begin(), member_message_number.end());
 						}

@@ -28,6 +28,7 @@ private:
 	std::vector<std::thread> workers_;
 	std::thread sender_;
 	std::thread schedule_midnight_task_;
+	std::thread schedule_periodic_task_;
 
 	std::atomic<bool> running_{ true };
 
@@ -58,4 +59,5 @@ private:
 	std::string gen_echo();
 	json call_api(const std::string&, const json&);
 	void schedule_midnight_task_loop();
+	void schedule_periodic_task_loop();
 };

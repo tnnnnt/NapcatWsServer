@@ -1,5 +1,6 @@
 #include "bot_client.h"
 #include "../logic/command_router.h"
+#include "../logic/common.hpp"
 #include <iostream>
 #include <chrono>
 #include <cstdlib>
@@ -19,15 +20,23 @@ BotClient::~BotClient() {
 		sender_.join();
 	if (schedule_midnight_task_.joinable())
 		schedule_midnight_task_.join();
+	if (schedule_periodic_task_.joinable())
+		schedule_periodic_task_.join();
 }
 
 void BotClient::start() {
+	CommandRouter::load_config();
+	CommandRouter::load_today_group_member_message_number_data();
 	reader_ = std::thread([this]() { read_loop(); });
-	for (int i = 0; i < 1; ++i)
+	for (size_t i = 0; i < common::POOL_SIZE; ++i)
 		workers_.emplace_back([this]() { worker_loop(); });
 	//启动发送线程（限速核心）
 	sender_ = std::thread([this]() { sender_loop(); });
 	schedule_midnight_task_ = std::thread([this]() { schedule_midnight_task_loop(); });
+	schedule_periodic_task_ = std::thread([this]() { schedule_periodic_task_loop(); });
+	CommandRouter::updata_group_members_data([this](auto action, auto params) {
+		return call_api(action, params);
+		});
 }
 
 void BotClient::read_loop() {
@@ -43,7 +52,7 @@ void BotClient::read_loop() {
 		catch (std::exception& e) {
 			std::cout << "read error: " << e.what() << std::endl;
 			std::cout << "msg: \n" << msg << std::endl;
-			running_ = false;
+			//running_ = false; // 暂时注释掉这一行，保持连接，继续处理后续消息
 		}
 	}
 }
@@ -100,11 +109,7 @@ void BotClient::sender_loop() {
 		try {
 			if (msg["action"] == "send_private_msg" || msg["action"] == "send_group_msg" || msg["action"] == "send_msg") {
 				//限速（核心）
-				const int base = 3000;                 // 3000ms
-				const int jitter = rand() % 7000;      // 0~7000ms
-				std::this_thread::sleep_for(
-					std::chrono::milliseconds(base + jitter)
-				);
+				std::this_thread::sleep_for(std::chrono::seconds(common::BASE_DELAY + rand() % common::RANDOM_DELAY));
 			}
 			std::lock_guard<std::mutex> lock(ws_mutex_);
 			ws_.write(boost::asio::buffer(msg.dump()));
@@ -146,9 +151,6 @@ json BotClient::call_api(const std::string& action, const json& params) {
 }
 
 void BotClient::schedule_midnight_task_loop() {
-	CommandRouter::daily([this](auto action, auto params) {
-		return call_api(action, params);
-		}); // 启动时先执行一次
 	while (true) {
 		using namespace std::chrono;
 		auto now = system_clock::now();
@@ -167,5 +169,12 @@ void BotClient::schedule_midnight_task_loop() {
 		CommandRouter::daily([this](auto action, auto params) {
 			return call_api(action, params);
 			});
+	}
+}
+
+void BotClient::schedule_periodic_task_loop() {
+	while (true) {
+		std::this_thread::sleep_for(std::chrono::seconds(common::TIME_SAVE_INTERVAL));
+		CommandRouter::save_today_group_member_message_number_data();
 	}
 }

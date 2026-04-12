@@ -14,19 +14,28 @@ namespace fs = std::filesystem;
 
 namespace common
 {
-	inline constexpr int64_t ROBOT_QQ = 3777014797; // 替换为你的机器人 QQ 号
-	inline constexpr int64_t ADMIN_QQ = 2324141281; // 替换为管理员 QQ 号
-	inline const std::string WORK_DIR = "/home/bot/qq_robot"; // 替换为你的工作目录路径
-	inline const std::string EAT_DIR = WORK_DIR + "/eat"; // 吃什么
-	inline const std::string DRINK_DIR = WORK_DIR + "/drink"; // 喝什么
-	inline const size_t RANK_SIZE = 20; // 排行榜大小
-	inline std::unordered_map<int64_t, std::vector<int64_t>>group_members; // 群成员列表
+	inline const std::string WORK_DIR = "/home/bot/qq_robot/"; // 替换为你的工作目录路径
+	inline const std::string CONFIG_FILE = WORK_DIR + "config.json"; // 配置文件
+	inline const std::string SAVE_DIR = WORK_DIR + "save/"; // 数据保存目录
+	
+	inline int64_t ADMIN_QQ; // 管理员 QQ 号
+	inline int64_t ROBOT_QQ; // 机器人 QQ 号
+	inline size_t POOL_SIZE; // 线程池大小
+	inline size_t RANK_SIZE; // 排行榜大小
+	inline size_t BASE_DELAY; // 基础延迟（秒）
+	inline size_t RANDOM_DELAY; // 随机延迟（秒）
+	inline size_t TIME_SAVE_INTERVAL; // 数据保存时间间隔（秒）
+	inline size_t TIME_ZONE_OFFSET; // 时区偏移（秒）
+	inline std::string EAT_DIR; // 吃什么
+	inline std::string DRINK_DIR; // 喝什么
+	inline std::string TODAY_GROUP_MEMBER_MESSAGE_NUMBER_FILE; // 今日群成员发言数文件
+	
 	inline std::mutex group_members_mutex; // 保护 group_members 的互斥锁
-	inline std::unordered_map<int64_t, std::unordered_map<int64_t, int>>yesterday_group_member_message_number; // 昨日群成员发言数
-	inline std::unordered_map<int64_t, std::unordered_map<int64_t, int>>today_group_member_message_number; // 今日群成员发言数
-	inline std::unordered_map<int64_t, std::vector<std::pair<int64_t, int>>>yesterday_group_member_message_rank; // 昨日群成员发言数排行榜（按发言数从多到少排序，每个群最多20个）
-	inline std::mutex group_member_message_number_mutex; // 保护 group_member_message_number 的互斥锁
+	inline std::unordered_map<int64_t, std::vector<int64_t>>group_members; // 群成员列表
 
+	inline std::mutex today_group_member_message_number_mutex; // 保护 group_member_message_number 的互斥锁
+	inline std::unordered_map<int64_t, std::unordered_map<int64_t, int>>today_group_member_message_number; // 今日群成员发言数
+	
 	// 判断字符串是否仅包含空格
 	inline bool is_only_spaces(const std::string& s)
 	{
