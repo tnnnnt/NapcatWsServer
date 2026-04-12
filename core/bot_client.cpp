@@ -52,7 +52,7 @@ void BotClient::read_loop() {
 		catch (std::exception& e) {
 			std::cout << "read error: " << e.what() << std::endl;
 			std::cout << "msg: \n" << msg << std::endl;
-			//running_ = false; // 暂时注释掉这一行，保持连接，继续处理后续消息
+			running_ = false;
 		}
 	}
 }
