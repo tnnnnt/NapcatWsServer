@@ -1,5 +1,7 @@
+#include "../command_router.h"
 #include "../common.hpp"
 #include "handle_message.h"
+#include <fstream>
 #include <string>
 #include <vector>
 
@@ -8,7 +10,9 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 	if (message_type == "private") {
 		json params{};
 		params["user_id"] = event.at("user_id");
-		params["message"] = "暂时不支持私聊，请催促tnt更新";
+		json message = json::array();
+		common::add_text_message(message, "暂时不支持私聊，请催促tnt更新");
+		params["message"] = message;
 		api("send_private_msg", params);
 	}
 	else if (message_type == "group") {
@@ -22,7 +26,7 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 		const auto& message_array = event.at("message");
 		const int64_t seed = time / 86400 + user_id; // 每天每人一个固定的 seed
 		const auto message_size = message_array.size();
-		int luckey_num;
+		int luckey_num = 0; // 初始化，避免未定义行为
 		if (message_size == 1) {
 			const auto& seg_obj = message_array[0];
 			const std::string type = seg_obj.at("type").get<std::string>();
@@ -33,24 +37,17 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 					json params{};
 					params["group_id"] = group_id;
 					json message = json::array();
-					std::vector<std::string> fortune = { "出行", "交友", "恋爱", "相亲", "工作", "面试", "VRChat", "游戏",
-						"学习", "睡觉", "吃饭", "喝水", "运动", "理财", "打扫卫生", "写代码", "unity", "摸鱼", "买彩票", "请客",
-						"旅行", "结婚", "生孩子", "搬家", "购物", "看电影", "看书", "水群", "吃瓜", "遛狗", "遛猫", "钓鱼",
-						"打台球", "打麻将", "KTV", "跳舞", "blender", "打篮球", "羽毛球", "面基", "骑行", "游泳", "加班"}; // 运势
-					common::shuffle_vector(fortune, luckey_num, seed);
-					message.emplace_back(json{
-						{"type", "at"},
-						{"data", json{
-							{"qq", user_id}
-						}}
-						});
-					message.emplace_back(json{
-						{"type", "text"},
-						{"data", json{
-							{"text", "\n今日运势（仅供娱乐）\n宜：" + fortune[0] + " " + fortune[1] + " " + fortune[2] +
-							"\n忌：" + fortune[3] + " " + fortune[4] + " " + fortune[5] + "\n幸运数字：" + std::to_string(luckey_num)}
-						}}
-						});
+					std::vector<std::string> fortunes; // 运势
+					std::string fortune;
+					std::ifstream ifs(common::FORTUNE_FILE);
+					while (std::getline(ifs, fortune)) {
+						fortunes.push_back(fortune);
+					}
+					ifs.close();
+					common::shuffle_vector(fortunes, luckey_num, seed);
+					common::add_at_message(message, user_id);
+					common::add_text_message(message, "\n今日运势（仅供娱乐）\n宜：" + fortunes[0] + " " + fortunes[1] + " " + fortunes[2] +
+						"\n忌：" + fortunes[3] + " " + fortunes[4] + " " + fortunes[5] + "\n幸运数字：" + std::to_string(luckey_num));
 					params["message"] = message;
 					api("send_group_msg", params);
 				}
@@ -59,7 +56,7 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 					std::vector<int64_t>temp;
 					{
 						std::lock_guard<std::mutex> lock(common::group_members_mutex);
-						temp = common::group_members[group_id];
+						temp = (common::group_active_members[group_id].empty() ? common::group_members : common::group_active_members)[group_id];
 					}
 					common::shuffle_vector(temp, luckey_num, seed);
 					int64_t match_id;
@@ -71,68 +68,33 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 					json params{};
 					params["group_id"] = group_id;
 					json message = json::array();
-					message.emplace_back(json{
-						{"type", "at"},
-						{"data", json{
-							{"qq", user_id}
-						}}
-						});
+					common::add_at_message(message, user_id);
 					const std::string last_sentence = (text == "今日老婆") ? "请好好对待她哦~" : (text == "今日老公") ? "请好好对待他哦~" : "快去叫妈妈！";
-					message.emplace_back(json{
-						{"type", "text"},
-						{"data", json{
-							{"text", "\n你的" + text + "是【" + match_name + "】\n" + last_sentence}
-						}}
-						});
-					message.emplace_back(json{
-						{"type", "image"},
-						{"data", json{
-							{"file", "https://q.qlogo.cn/g?b=qq&nk=" + std::to_string(match_id) + "&s=4"}
-						}}
-						});
+					common::add_text_message(message, "\n你的" + text + "是【" + match_name + "】\n" + last_sentence);
+					common::add_image_message(message, "https://q.qlogo.cn/g?b=qq&nk=" + std::to_string(match_id) + "&s=4");
 					params["message"] = message;
 					api("send_group_msg", params);
 				}
 				else if (text == "今日龙王榜") {
+					CommandRouter::send_today_group_member_message_number_data(group_id, api);
+				}
+				else if (text == "订阅通知") {
+					CommandRouter::add_notice_group_member(group_id, user_id);
 					json params{};
 					params["group_id"] = group_id;
 					json message = json::array();
-					message.emplace_back(json{
-						{"type", "text"},
-						{"data", json{
-							{"text", text + "\n\n"}
-						}}
-						});
-					std::vector<std::pair<int64_t, int>>member_message_rank;
-					{
-						std::lock_guard<std::mutex> lock(common::today_group_member_message_number_mutex);
-						const auto& member_message_number = common::today_group_member_message_number[group_id];
-						member_message_rank.insert(member_message_rank.end(), member_message_number.begin(), member_message_number.end());
-					}
-					const size_t k = std::min(common::RANK_SIZE, member_message_rank.size());
-					std::partial_sort(
-						member_message_rank.begin(), member_message_rank.begin() + k, member_message_rank.end(),
-						[](const std::pair<int64_t, int>& a, const std::pair<int64_t, int>& b)
-						{
-							return a.second > b.second; // 按 value 降序
-						});
-					for (size_t i = 0; i < k; ++i) {
-						const int64_t user_id = member_message_rank[i].first;
-						const int message_num = member_message_rank[i].second;
-						const std::string user_name = api("get_group_member_info", json{ {"group_id", std::to_string(group_id)}, { "user_id", std::to_string(user_id) } })["data"].at("nickname").get<std::string>();
-						message.emplace_back(json{
-							{"type", "text"},
-							{"data", json{
-								{"text", std::to_string(i + 1) + ". " + user_name + " 发言数：" + std::to_string(message_num) + "\n"}
-							}}
-							});
-						message.emplace_back(json{
-							{"type", "image"},
-							{"data", json{
-								{"file", "https://q.qlogo.cn/g?b=qq&nk=" + std::to_string(user_id) + "&s=1"}
-							}}
-							});
-					}
+					common::add_at_message(message, user_id);
+					common::add_text_message(message, "\n 订阅成功喵~");
+					params["message"] = message;
+					api("send_group_msg", params);
+				}
+				else if (text == "取消订阅") {
+					CommandRouter::del_notice_group_member(group_id, user_id);
+					json params{};
+					params["group_id"] = group_id;
+					json message = json::array();
+					common::add_at_message(message, user_id);
+					common::add_text_message(message, "\n 取消订阅成功喵~");
 					params["message"] = message;
 					api("send_group_msg", params);
 				}
@@ -142,24 +104,9 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 						json params{};
 						params["group_id"] = group_id;
 						json message = json::array();
-						message.emplace_back(json{
-							{"type", "text"},
-							{"data", json{
-								{"text", "传"}
-							}}
-							});
-						message.emplace_back(json{
-							{"type", "at"},
-							{"data", json{
-								{"qq", user_id}
-							}}
-							});
-						message.emplace_back(json{
-							{"type", "text"},
-							{"data", json{
-								{"text", "口谕：\n\n"}
-							}}
-							});
+						common::add_text_message(message, "传");
+						common::add_at_message(message, user_id);
+						common::add_text_message(message, "口谕：\n\n");
 						std::vector<std::pair<int64_t, int>>member_message_rank;
 						{
 							std::lock_guard<std::mutex> lock(common::today_group_member_message_number_mutex);
@@ -175,19 +122,9 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 							});
 						for (size_t i = 0; i < k; ++i) {
 							const int64_t user_id = member_message_rank[i].first;
-							message.emplace_back(json{
-								{"type", "at"},
-								{"data", json{
-									{"qq", user_id}
-								}}
-								});
+							common::add_at_message(message, user_id);
 						}
-						message.emplace_back(json{
-							{"type", "text"},
-							{"data", json{
-								{"text", "\n\n" + command}
-							}}
-							});
+						common::add_text_message(message, "\n\n" + command);
 						params["message"] = message;
 						api("send_group_msg", params);
 					}
@@ -195,99 +132,28 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 						json params{};
 						params["group_id"] = group_id;
 						json message = json::array();
-						message.emplace_back(json{
-							{"type", "at"},
-							{"data", json{
-								{"qq", user_id}
-							}}
-							});
-						message.emplace_back(json{
-							{"type", "text"},
-							{"data", json{
-								{"text", "\n权限不足"}
-							}}
-							});
+						common::add_at_message(message, user_id);
+						common::add_text_message(message, "\n权限不足");
 						params["message"] = message;
 						api("send_group_msg", params);
 					}
 				}
-				else if (text.find("吃什么") != std::string::npos || text.find("吃啥") != std::string::npos) {
+				else if (text.find("吃什么") != std::string::npos || text.find("吃啥") != std::string::npos || text.find("喝什么") != std::string::npos || text.find("喝啥") != std::string::npos) {
+					const bool is_eat = text.find("吃") != std::string::npos;
+					const auto& dir = is_eat ? common::EAT_DIR : common::DRINK_DIR;
 					std::vector<std::string> files;
-					common::get_files(common::EAT_DIR, files);
+					common::get_files(dir, files);
 					json params{};
 					params["group_id"] = group_id;
 					json message = json::array();
 					if (files.empty()) {
-						message.emplace_back(json{
-							{"type", "text"},
-							{"data", json{
-								{"text", "别吃"}
-							}}
-							});
+						common::add_text_message(message, is_eat ? "别吃" : "别喝");
 					}
 					else {
 						const std::string random_file = files[time % files.size()];
-						message.emplace_back(json{
-							{"type", "text"},
-							{"data", json{
-								{"text", "推荐" + common::remove_extension(random_file)}
-							}}
-							});
-						message.emplace_back(json{
-							{"type", "image"},
-							{"data", json{
-								{"file", "file:///" + common::EAT_DIR + "/" + random_file}
-							}}
-							});
+						common::add_text_message(message, "推荐" + common::remove_extension(random_file));
+						common::add_image_message(message, "file:///" + dir + "/" + random_file);
 					}
-					params["message"] = message;
-					api("send_group_msg", params);
-				}
-				else if (text.find("喝什么") != std::string::npos || text.find("喝啥") != std::string::npos) {
-					std::vector<std::string> files;
-					common::get_files(common::DRINK_DIR, files);
-					json params{};
-					params["group_id"] = group_id;
-					json message = json::array();
-					if (files.empty()) {
-						message.emplace_back(json{
-							{"type", "text"},
-							{"data", json{
-								{"text", "别喝"}
-							}}
-							});
-					}
-					else {
-						const std::string random_file = files[time % files.size()];
-						message.emplace_back(json{
-							{"type", "text"},
-							{"data", json{
-								{"text", "推荐" + common::remove_extension(random_file)}
-							}}
-							});
-						message.emplace_back(json{
-							{"type", "image"},
-							{"data", json{
-								{"file", "file:///" + common::DRINK_DIR + "/" + random_file}
-							}}
-							});
-					}
-					params["message"] = message;
-					api("send_group_msg", params);
-				}
-			}
-			else if (type == "at") {
-				const int64_t qq = std::stoll(seg_obj.at("data").at("qq").get<std::string>());
-				if (qq == common::ROBOT_QQ) {
-					json params{};
-					params["group_id"] = group_id;
-					json message = json::array();
-					message.emplace_back(json{
-						{"type", "text"},
-						{"data", json{
-							{"text", "干什么！"}
-						}}
-						});
 					params["message"] = message;
 					api("send_group_msg", params);
 				}
@@ -307,12 +173,7 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 							json params{};
 							params["group_id"] = group_id;
 							json message = json::array();
-							message.emplace_back(json{
-								{"type", "text"},
-								{"data", json{
-									{"text", "干什么！"}
-								}}
-								});
+							common::add_text_message(message, "干什么！");
 							params["message"] = message;
 							api("send_group_msg", params);
 						}
@@ -322,3 +183,28 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 		}
 	}
 }
+/*
+上传文件功能
+关系图
+崩溃自动重启
+来点色图
+1. 近期群成员变动情况
+2. 求婚
+3. 大富翁
+4. vrc id 绑定
+5. 群友美图
+6. 群成员分布情况（性别、地域、等级等）
+7. 视频转发
+8. 指令调用统计
+9. 设置群提醒
+10. 设置群成员专属提醒
+11. 充值系统
+12. 日历
+13. 帮助菜单
+15. 简单对话*
+16. 吃瓜省流*
+17. 群分析*
+18. 用户画像*
+19. 统计（调用次数）
+20. vrc api调用
+*/

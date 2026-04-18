@@ -52,7 +52,7 @@ void BotClient::read_loop() {
 		catch (std::exception& e) {
 			std::cout << "read error: " << e.what() << std::endl;
 			std::cout << "msg: \n" << msg << std::endl;
-			running_ = false;
+			std::this_thread::sleep_for(std::chrono::seconds(common::TIME_SAVE_INTERVAL));
 		}
 	}
 }
