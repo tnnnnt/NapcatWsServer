@@ -19,6 +19,14 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 		const auto time = event.at("time").get<int64_t>() + common::TIME_ZONE_OFFSET; // 转为北京时间
 		const int64_t group_id = event.at("group_id").get<int64_t>();
 		const int64_t user_id = event.at("user_id").get<int64_t>();
+		if (group_id == common::TEST_GROUP) {
+			json params{};
+			params["group_id"] = group_id;
+			json message = json::array();
+			common::add_text_message(message, event.dump(4));
+			params["message"] = message;
+			api("send_group_msg", params);
+		}
 		{
 			std::lock_guard<std::mutex> lock(common::today_group_member_message_number_mutex);
 			++common::today_group_member_message_number[group_id][user_id];
@@ -51,7 +59,7 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 					params["message"] = message;
 					api("send_group_msg", params);
 				}
-				else if (text == "今日老婆" || text == "今日老公" || text == "今日妈妈")
+				else if (text == "今日老婆" || text == "今日老公" || text == "今日妈妈" || text == "今日主人")
 				{
 					std::vector<int64_t>temp;
 					{
@@ -59,17 +67,23 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 						temp = (common::group_active_members[group_id].empty() ? common::group_members : common::group_active_members)[group_id];
 					}
 					common::shuffle_vector(temp, luckey_num, seed);
+					const int member_count = temp.size();
 					int64_t match_id;
 					if (text == "今日老婆")match_id = temp[0];
-					else if (text == "今日老公")match_id = temp[1];
-					else if (text == "今日妈妈")match_id = temp[2];
+					else if (text == "今日老公")match_id = temp[std::min(member_count - 1, 1)];
+					else if (text == "今日妈妈")match_id = temp[std::min(member_count - 1, 2)];
+					else if (text == "今日主人")match_id = temp[std::min(member_count - 1, 3)];
 
 					const std::string match_name = api("get_group_member_info", json{ {"group_id", std::to_string(group_id)}, { "user_id", std::to_string(match_id) } })["data"].at("nickname").get<std::string>();
 					json params{};
 					params["group_id"] = group_id;
 					json message = json::array();
 					common::add_at_message(message, user_id);
-					const std::string last_sentence = (text == "今日老婆") ? "请好好对待她哦~" : (text == "今日老公") ? "请好好对待他哦~" : "快去叫妈妈！";
+					std::string last_sentence;
+					if (text == "今日老婆") last_sentence = "请好好对待她哦~";
+					else if (text == "今日老公") last_sentence = "请好好对待他哦~";
+					else if (text == "今日妈妈") last_sentence = "快去叫妈妈！";
+					else if (text == "今日主人") last_sentence = "快去叫主人！";
 					common::add_text_message(message, "\n你的" + text + "是【" + match_name + "】\n" + last_sentence);
 					common::add_image_message(message, "https://q.qlogo.cn/g?b=qq&nk=" + std::to_string(match_id) + "&s=4");
 					params["message"] = message;
@@ -95,6 +109,22 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 					json message = json::array();
 					common::add_at_message(message, user_id);
 					common::add_text_message(message, "\n 取消订阅成功喵~");
+					params["message"] = message;
+					api("send_group_msg", params);
+				}
+				else if (text == "来点色图") {
+					std::vector<std::string> files;
+					common::get_files(common::SEX_DIR, files);
+					json params{};
+					params["group_id"] = group_id;
+					json message = json::array();
+					if (files.empty()) {
+						common::add_text_message(message, "没有色图了喵~");
+					}
+					else {
+						const std::string random_file = files[time % files.size()];
+						common::add_image_message(message, "file:///" + common::SEX_DIR + "/" + random_file);
+					}
 					params["message"] = message;
 					api("send_group_msg", params);
 				}
@@ -184,15 +214,19 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 	}
 }
 /*
-上传文件功能
+加日志功能
+上传文件功能(仅tnt)
+使用群昵称
+求婚
 关系图
 崩溃自动重启
-来点色图
+简单对话*
+吃瓜省流*
+群分析*
+用户画像*
 1. 近期群成员变动情况
-2. 求婚
 3. 大富翁
 4. vrc id 绑定
-5. 群友美图
 6. 群成员分布情况（性别、地域、等级等）
 7. 视频转发
 8. 指令调用统计
@@ -201,10 +235,6 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 11. 充值系统
 12. 日历
 13. 帮助菜单
-15. 简单对话*
-16. 吃瓜省流*
-17. 群分析*
-18. 用户画像*
 19. 统计（调用次数）
 20. vrc api调用
 */

@@ -20,6 +20,7 @@ namespace common
 	inline const std::string SAVE_DIR = WORK_DIR + "save/"; // 数据保存目录
 	inline const std::string FORTUNE_FILE = common::SAVE_DIR + "fortunes.txt";
 	inline const std::string NOTICE_GROUP_MEMBER_FILE = common::SAVE_DIR + "notice_group_member.json";
+	inline const int64_t TEST_GROUP = 1092859942; // 测试群
 	
 	inline int64_t ADMIN_QQ; // 管理员 QQ 号
 	inline int64_t ROBOT_QQ; // 机器人 QQ 号
@@ -32,6 +33,7 @@ namespace common
 	inline size_t MIN_ACTIVITY_LEVEL; // 最小活跃度要求（群等级）
 	inline std::string EAT_DIR; // 吃什么
 	inline std::string DRINK_DIR; // 喝什么
+	inline std::string SEX_DIR; // 色图
 	inline std::string TODAY_GROUP_MEMBER_MESSAGE_NUMBER_FILE; // 今日群成员发言数文件
 	
 	inline std::mutex group_members_mutex; // 保护 group_members 的互斥锁
