@@ -49,6 +49,18 @@ namespace common
 	{
 		return !s.empty() && std::all_of(s.begin(), s.end(), [](char c) { return c == ' '; });
 	}
+	// 判断字符串s是否由ss开头
+	inline bool starts_with_and_trim(const std::string& s, const std::string& ss, std::string& out)
+	{
+		if (s.size() < ss.size())
+			return false;
+		if (s.compare(0, ss.size(), ss) == 0)
+		{
+			out = s.substr(ss.size());
+			return true;
+		}
+		return false;
+	}
 	// 去掉后缀
 	inline std::string remove_extension(const std::string& filename) {
 		const std::size_t pos = filename.find_last_of('.');

@@ -210,15 +210,143 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 					}
 				}
 			}
+			else if (type0 == "reply") {
+				const std::string message_id = seg_obj0.at("data").at("id").get<std::string>();
+				if (type1 == "text") {
+					const std::string text = seg_obj1.at("data").at("text").get<std::string>();
+					std::string word;
+					if (text == "/上传色图") {
+						if (common::ADMIN_QQ == user_id) {
+							json params{};
+							params["message_id"] = message_id;
+							const auto messages_json = api("get_msg", params)["data"].at("message");
+							int suc = 0;
+							int total = 0;
+							json message = json::array();
+							for (const auto& message_json : messages_json) {
+								if (message_json.at("type") == "image") {
+									++total;
+									const auto image_data = message_json.at("data");
+									const std::string file_name = image_data.at("file").get<std::string>();
+									const std::string url = image_data.at("url").get<std::string>();
+									const std::string save_path = "../../../../../" + common::SEX_DIR + "/" + file_name;
+									const auto response = api("download_file", json{ {"url", url}, {"name", save_path} });
+									const int64_t retcode = response["retcode"].get<int64_t>();
+									if (retcode == 0) {
+										++suc;
+									}
+									else {
+										common::add_text_message(message, response["message"].get<std::string>() + "\n");
+									}
+								}
+							}
+							params["group_id"] = group_id;
+							common::add_text_message(message, "上传完成！成功率：" + std::to_string(suc) + "/" + std::to_string(total));
+							params["message"] = message;
+							api("send_group_msg", params);
+						}
+						else {
+							json params{};
+							params["group_id"] = group_id;
+							json message = json::array();
+							common::add_at_message(message, user_id);
+							common::add_text_message(message, "\n权限不足");
+							params["message"] = message;
+							api("send_group_msg", params);
+						}
+					}
+					else if (common::starts_with_and_trim(text, "/吃！", word)) {
+						if (common::ADMIN_QQ == user_id) {
+							json params{};
+							params["message_id"] = message_id;
+							const auto messages_json = api("get_msg", params)["data"].at("message");
+							bool suc = false;
+							for (const auto& message_json : messages_json) {
+								if (message_json.at("type") == "image") {
+									const auto image_data = message_json.at("data");
+									const std::string url = image_data.at("url").get<std::string>();
+									const std::string save_path = "../../../../../" + common::EAT_DIR + "/" + word;
+									const auto response = api("download_file", json{ {"url", url}, {"name", save_path} });
+									const int64_t retcode = response["retcode"].get<int64_t>();
+									if (retcode == 0) {
+										suc = true;
+										break;
+									}
+								}
+							}
+							params["group_id"] = group_id;
+							json message = json::array();
+							if (suc) {
+								common::add_text_message(message, "Rusk最喜欢吃" + word + "了！真好吃！");
+							}
+							else {
+								common::add_text_message(message, "呸呸呸！" + word + "真难吃！");
+							}
+							params["message"] = message;
+							api("send_group_msg", params);
+						}
+						else {
+							json params{};
+							params["group_id"] = group_id;
+							json message = json::array();
+							common::add_at_message(message, user_id);
+							common::add_text_message(message, "\n权限不足");
+							params["message"] = message;
+							api("send_group_msg", params);
+						}
+					}
+					else if (common::starts_with_and_trim(text, "/喝！", word)) {
+						if (common::ADMIN_QQ == user_id) {
+							json params{};
+							params["message_id"] = message_id;
+							const auto messages_json = api("get_msg", params)["data"].at("message");
+							bool suc = false;
+							for (const auto& message_json : messages_json) {
+								if (message_json.at("type") == "image") {
+									const auto image_data = message_json.at("data");
+									const std::string url = image_data.at("url").get<std::string>();
+									const std::string save_path = "../../../../../" + common::DRINK_DIR + "/" + word;
+									const auto response = api("download_file", json{ {"url", url}, {"name", save_path} });
+									const int64_t retcode = response["retcode"].get<int64_t>();
+									if (retcode == 0) {
+										suc = true;
+										break;
+									}
+								}
+							}
+							params["group_id"] = group_id;
+							json message = json::array();
+							if (suc) {
+								common::add_text_message(message, "吨吨吨！" + word + "真好喝！");
+							}
+							else {
+								common::add_text_message(message, "yue~ " + word + "真难喝！");
+							}
+							params["message"] = message;
+							api("send_group_msg", params);
+						}
+						else {
+							json params{};
+							params["group_id"] = group_id;
+							json message = json::array();
+							common::add_at_message(message, user_id);
+							common::add_text_message(message, "\n权限不足");
+							params["message"] = message;
+							api("send_group_msg", params);
+						}
+					}
+				}
+			}
 		}
 	}
 }
 /*
-加日志功能
-上传文件功能(仅tnt)
 使用群昵称
-求婚
 关系图
+优化传旨功能
+加日志功能
+今日说法
+求婚
 崩溃自动重启
 简单对话*
 吃瓜省流*
