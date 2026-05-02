@@ -218,7 +218,16 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 					const std::string text = seg_obj1.at("data").at("text").get<std::string>();
 					std::string word;
 					if (text == "/上传色图") {
-						if (common::ADMIN_QQ == user_id) {
+						if (common::is_ban(user_id)) {
+							json params{};
+							params["group_id"] = group_id;
+							json message = json::array();
+							common::add_at_message(message, user_id);
+							common::add_text_message(message, "\n权限不足");
+							params["message"] = message;
+							api("send_group_msg", params);
+						}
+						else {
 							json params{};
 							params["message_id"] = message_id;
 							const auto messages_json = api("get_msg", params)["data"].at("message");
@@ -247,7 +256,9 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 							params["message"] = message;
 							api("send_group_msg", params);
 						}
-						else {
+					}
+					else if (common::starts_with_and_trim(text, "/吃！", word)) {
+						if (common::is_ban(user_id)) {
 							json params{};
 							params["group_id"] = group_id;
 							json message = json::array();
@@ -256,9 +267,7 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 							params["message"] = message;
 							api("send_group_msg", params);
 						}
-					}
-					else if (common::starts_with_and_trim(text, "/吃！", word)) {
-						if (common::ADMIN_QQ == user_id) {
+						else {
 							json params{};
 							params["message_id"] = message_id;
 							const auto messages_json = api("get_msg", params)["data"].at("message");
@@ -287,7 +296,9 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 							params["message"] = message;
 							api("send_group_msg", params);
 						}
-						else {
+					}
+					else if (common::starts_with_and_trim(text, "/喝！", word)) {
+						if (common::is_ban(user_id)) {
 							json params{};
 							params["group_id"] = group_id;
 							json message = json::array();
@@ -296,9 +307,7 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 							params["message"] = message;
 							api("send_group_msg", params);
 						}
-					}
-					else if (common::starts_with_and_trim(text, "/喝！", word)) {
-						if (common::ADMIN_QQ == user_id) {
+						else {
 							json params{};
 							params["message_id"] = message_id;
 							const auto messages_json = api("get_msg", params)["data"].at("message");
@@ -327,15 +336,6 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 							params["message"] = message;
 							api("send_group_msg", params);
 						}
-						else {
-							json params{};
-							params["group_id"] = group_id;
-							json message = json::array();
-							common::add_at_message(message, user_id);
-							common::add_text_message(message, "\n权限不足");
-							params["message"] = message;
-							api("send_group_msg", params);
-						}
 					}
 				}
 			}
@@ -343,7 +343,6 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 	}
 }
 /*
-开放权限（黑名单）
 关系图
 优化传旨功能
 加日志功能

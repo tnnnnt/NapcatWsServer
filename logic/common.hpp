@@ -10,6 +10,7 @@
 #include <string_view>
 #include <unordered_map>
 #include <vector>
+#include <fstream>
 
 namespace fs = std::filesystem;
 
@@ -19,6 +20,7 @@ namespace common
 	inline const std::string CONFIG_FILE = WORK_DIR + "config.json"; // 配置文件
 	inline const std::string SAVE_DIR = WORK_DIR + "save/"; // 数据保存目录
 	inline const std::string FORTUNE_FILE = common::SAVE_DIR + "fortunes.txt";
+	inline const std::string BAN_FILE = common::SAVE_DIR + "ban.txt";
 	inline const std::string NOTICE_GROUP_MEMBER_FILE = common::SAVE_DIR + "notice_group_member.json";
 	inline const int64_t TEST_GROUP = 1092859942; // 测试群
 	
@@ -87,6 +89,19 @@ namespace common
 		std::mt19937 rng(seed);
 		luckey_num = rng() % 100;
 		std::shuffle(v.begin(), v.end(), rng);
+	}
+	// 判断用户是否在黑名单中
+	inline bool is_ban(const int64_t& user_id) {
+		std::string ban;
+		std::ifstream ifs(BAN_FILE);
+		while (std::getline(ifs, ban)) {
+			if (std::stoll(ban) == user_id) {
+				ifs.close();
+				return true;
+			}
+		}
+		ifs.close();
+		return false;
 	}
 	//纯文本
 	inline void add_text_message(json& message, const std::string& text) {
