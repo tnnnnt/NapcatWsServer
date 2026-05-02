@@ -19,9 +19,13 @@ namespace common
 	inline const std::string WORK_DIR = "/home/bot/qq_robot/"; // 替换为你的工作目录路径
 	inline const std::string CONFIG_FILE = WORK_DIR + "config.json"; // 配置文件
 	inline const std::string SAVE_DIR = WORK_DIR + "save/"; // 数据保存目录
+	inline const std::string EAT_DIR = common::WORK_DIR + "eat"; // 吃什么
+	inline const std::string DRINK_DIR = common::WORK_DIR + "drink"; // 喝什么
+	inline const std::string SEX_DIR = common::WORK_DIR + "sex"; // 色图
 	inline const std::string FORTUNE_FILE = common::SAVE_DIR + "fortunes.txt";
 	inline const std::string BAN_FILE = common::SAVE_DIR + "ban.txt";
 	inline const std::string NOTICE_GROUP_MEMBER_FILE = common::SAVE_DIR + "notice_group_member.json";
+	inline const std::string TODAY_GROUP_MEMBER_MESSAGE_NUMBER_FILE = common::SAVE_DIR + "today_group_member_message_number.json"; // 今日群成员发言数文件
 	inline const int64_t TEST_GROUP = 1092859942; // 测试群
 	
 	inline int64_t ADMIN_QQ; // 管理员 QQ 号
@@ -33,10 +37,6 @@ namespace common
 	inline size_t TIME_SAVE_INTERVAL; // 数据保存时间间隔（秒）
 	inline size_t TIME_ZONE_OFFSET; // 时区偏移（秒）
 	inline size_t MIN_ACTIVITY_LEVEL; // 最小活跃度要求（群等级）
-	inline std::string EAT_DIR; // 吃什么
-	inline std::string DRINK_DIR; // 喝什么
-	inline std::string SEX_DIR; // 色图
-	inline std::string TODAY_GROUP_MEMBER_MESSAGE_NUMBER_FILE; // 今日群成员发言数文件
 	
 	inline std::mutex group_members_mutex; // 保护 group_members 的互斥锁
 	inline std::vector<int64_t> group_ids; // 群列表

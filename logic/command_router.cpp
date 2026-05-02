@@ -42,10 +42,6 @@ void CommandRouter::load_config() {
 	common::TIME_SAVE_INTERVAL = config_json.at("time_save_interval").get<size_t>();
 	common::TIME_ZONE_OFFSET = config_json.at("time_zone_offset").get<size_t>();
 	common::MIN_ACTIVITY_LEVEL = config_json.at("min_activity_level").get<size_t>();
-	common::EAT_DIR = common::WORK_DIR + config_json.at("eat_dir").get<std::string>();
-	common::DRINK_DIR = common::WORK_DIR + config_json.at("drink_dir").get<std::string>();
-	common::SEX_DIR = common::WORK_DIR + config_json.at("sex_dir").get<std::string>();
-	common::TODAY_GROUP_MEMBER_MESSAGE_NUMBER_FILE = common::SAVE_DIR + config_json.at("today_group_member_message_number_file").get<std::string>();
 }
 void CommandRouter::updata_group_members_data(ApiFunc api) {
 	std::lock_guard<std::mutex> lock(common::group_members_mutex);
