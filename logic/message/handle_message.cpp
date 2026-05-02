@@ -74,7 +74,9 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 					else if (text == "今日妈妈")match_id = temp[std::min(member_count - 1, 2)];
 					else if (text == "今日主人")match_id = temp[std::min(member_count - 1, 3)];
 
-					const std::string match_name = api("get_group_member_info", json{ {"group_id", std::to_string(group_id)}, { "user_id", std::to_string(match_id) } })["data"].at("nickname").get<std::string>();
+					const auto group_member_info = api("get_group_member_info", json{ {"group_id", std::to_string(group_id)}, { "user_id", std::to_string(match_id) } })["data"];
+					const std::string card = group_member_info.at("card").get<std::string>();
+					const std::string match_name = card == "" ? group_member_info.at("nickname").get<std::string>() : card;
 					json params{};
 					params["group_id"] = group_id;
 					json message = json::array();
@@ -341,7 +343,7 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 	}
 }
 /*
-使用群昵称
+开放权限（黑名单）
 关系图
 优化传旨功能
 加日志功能
@@ -352,6 +354,7 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 吃瓜省流*
 群分析*
 用户画像*
+message预处理（去掉首尾空格）
 1. 近期群成员变动情况
 3. 大富翁
 4. vrc id 绑定
