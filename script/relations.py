@@ -67,31 +67,57 @@ def multi_component_layout(G):
 	pos = {}
 
 	components = list(nx.weakly_connected_components(G))
-
-	# ⭐ 按节点数排序（大的放前面，更美观）
 	components.sort(key=lambda c: -len(c))
 
-	col = 0
-	row = 0
-	max_cols = 3  # 每行最多放几个子图
+	# ⭐ 存储每个子图的信息
+	comp_infos = []
 
 	for comp in components:
-		sub_nodes = list(comp)
+		nodes = list(comp)
 
-		sub_pos = circle_layout(sub_nodes, MIN_DIST)
+		sub_pos = circle_layout(nodes, MIN_DIST)
 
-		# ⭐ 计算当前子图中心偏移
-		offset_x = col * COMPONENT_GAP_X
-		offset_y = row * COMPONENT_GAP_Y
+		# ⭐ 计算半径（最大距离）
+		max_r = 0
+		for x, y in sub_pos.values():
+			r = math.sqrt(x * x + y * y)
+			max_r = max(max_r, r)
 
-		# ⭐ 应用偏移
-		for node, (x, y) in sub_pos.items():
-			pos[node] = (x + offset_x, y + offset_y)
+		comp_infos.append({
+			"nodes": nodes,
+			"pos": sub_pos,
+			"radius": max_r + NODE_SIZE * 2  # ⭐ 加上头像尺寸防止贴边
+		})
 
-		col += 1
-		if col >= max_cols:
-			col = 0
-			row += 1
+	# =============================
+	# ⭐ 动态排版（关键）
+	# =============================
+	x_cursor = 0
+	y_cursor = 0
+	row_height = 0
+
+	MAX_WIDTH = 1600  # 一行最大宽度
+
+	for comp in comp_infos:
+		r = comp["radius"]
+		diameter = r * 2
+
+		# ⭐ 换行判断
+		if x_cursor + diameter > MAX_WIDTH:
+			x_cursor = 0
+			y_cursor += row_height + 80  # 行间距
+			row_height = 0
+
+		# ⭐ 放置当前子图
+		for node, (x, y) in comp["pos"].items():
+			pos[node] = (
+				x + x_cursor + r,
+				y + y_cursor + r
+			)
+
+		# ⭐ 更新游标
+		x_cursor += diameter + 80  # 子图间距
+		row_height = max(row_height, diameter)
 
 	return pos
 
@@ -203,18 +229,18 @@ def render_graph(G, output_html):
 		)
 
 	net.set_options("""
-    {
-      "physics": { "enabled": false },
-      "edges": {
-        "arrows": {
-          "to": {
-            "enabled": true,
-            "scaleFactor": 0.9
-          }
-        }
-      }
-    }
-    """)
+	{
+	  "physics": { "enabled": false },
+	  "edges": {
+		"arrows": {
+		  "to": {
+			"enabled": true,
+			"scaleFactor": 0.9
+		  }
+		}
+	  }
+	}
+	""")
 
 	net.write_html(output_html)
 
@@ -222,44 +248,44 @@ def render_graph(G, output_html):
 		html = f.read()
 
 	style = """
-    <style>
-    body {
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-      background: white;
-    }
-    </style>
-    """
+	<style>
+	body {
+	  margin: 0;
+	  padding: 0;
+	  overflow: hidden;
+	  background: white;
+	}
+	</style>
+	"""
 
 	legend = """
-    <div style="
-    position:absolute;
-    top:20px;
-    left:20px;
-    background:rgba(255,255,255,0.95);
-    padding:12px 16px;
-    border-radius:10px;
-    box-shadow:0 2px 8px rgba(0,0,0,0.15);
-    font-size:18px;
-    z-index:999;
-    ">
-    <b>关系说明</b>
-    """
+	<div style="
+	position:absolute;
+	top:20px;
+	left:20px;
+	background:rgba(255,255,255,0.95);
+	padding:12px 16px;
+	border-radius:10px;
+	box-shadow:0 2px 8px rgba(0,0,0,0.15);
+	font-size:18px;
+	z-index:999;
+	">
+	<b>关系说明</b>
+	"""
 
 	for name, color in RELATION_COLOR.items():
 		legend += f"""
-        <div style="margin-top:6px;">
-            <span style="
-                display:inline-block;
-                width:22px;
-                height:4px;
-                background:{color};
-                margin-right:8px;
-            "></span>
-            {name}
-        </div>
-        """
+		<div style="margin-top:6px;">
+			<span style="
+				display:inline-block;
+				width:22px;
+				height:4px;
+				background:{color};
+				margin-right:8px;
+			"></span>
+			{name}
+		</div>
+		"""
 
 	legend += "</div>"
 
