@@ -68,15 +68,45 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 					}
 					common::shuffle_vector(temp, luckey_num, seed);
 					const int member_count = temp.size();
-					int64_t match_id;
-					if (text == "今日老婆")match_id = temp[0];
-					else if (text == "今日老公")match_id = temp[std::min(member_count - 1, 1)];
-					else if (text == "今日妈妈")match_id = temp[std::min(member_count - 1, 2)];
-					else if (text == "今日主人")match_id = temp[std::min(member_count - 1, 3)];
-
-					const auto group_member_info = api("get_group_member_info", json{ {"group_id", std::to_string(group_id)}, { "user_id", std::to_string(match_id) } })["data"];
-					const std::string card = group_member_info.at("card").get<std::string>();
-					const std::string match_name = card == "" ? group_member_info.at("nickname").get<std::string>() : card;
+					int64_t match_id = 0;
+					{
+						std::lock_guard<std::mutex> lock(common::group_member_relations_mutex);
+						auto& member_relations = common::group_member_relations[group_id];
+						if (text == "今日老婆") {
+							if (member_relations[user_id].wife_id) {
+								match_id = member_relations[user_id].wife_id;
+							}
+							else {
+								match_id = member_relations[user_id].wife_id = temp[0];
+							}
+						}
+						else if (text == "今日老公") {
+							if (member_relations[user_id].husband_id) {
+								match_id = member_relations[user_id].husband_id;
+							}
+							else {
+								match_id = member_relations[user_id].husband_id = temp[std::min(member_count - 1, 1)];
+							}
+						}
+						else if (text == "今日妈妈") {
+							if (member_relations[user_id].mother_id) {
+								match_id = member_relations[user_id].mother_id;
+							}
+							else {
+								match_id = member_relations[user_id].mother_id = temp[std::min(member_count - 1, 2)];
+							}
+						}
+						else if (text == "今日主人") {
+							if (member_relations[user_id].master_id) {
+								match_id = member_relations[user_id].master_id;
+							}
+							else {
+								match_id = member_relations[user_id].master_id = temp[std::min(member_count - 1, 3)];
+							}
+						}
+					}
+					std::string match_name;
+					common::get_group_member_name(api, group_id, match_id, match_name);
 					json params{};
 					params["group_id"] = group_id;
 					json message = json::array();
@@ -88,6 +118,74 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 					else if (text == "今日主人") last_sentence = "快去叫主人！";
 					common::add_text_message(message, "\n你的" + text + "是【" + match_name + "】\n" + last_sentence);
 					common::add_image_message(message, "https://q.qlogo.cn/g?b=qq&nk=" + std::to_string(match_id) + "&s=4");
+					params["message"] = message;
+					api("send_group_msg", params);
+				}
+				else if (text == "关系图") {
+					const std::string file_name = common::RELATION_DIR + std::to_string(group_id) + ".png";
+					{
+						std::lock_guard<std::mutex> lock(common::group_member_relations_mutex);
+						json qq_name_json{};
+						json relations_json{};
+						for (const auto& member_relations : common::group_member_relations[group_id]) {
+							const int64_t member = member_relations.first;
+							const std::string member_str = std::to_string(member);
+							std::string name;
+							if (!qq_name_json.count(member_str)) {
+								common::get_group_member_name(api, group_id, member, name);
+								qq_name_json[member_str] = name;
+							}
+							const common::Relation relations = member_relations.second;
+							const int64_t husband_id = relations.husband_id;
+							const int64_t master_id = relations.master_id;
+							const int64_t mother_id = relations.mother_id;
+							const int64_t wife_id = relations.wife_id;
+							if (husband_id) {
+								const std::string husband_id_str = std::to_string(husband_id);
+								relations_json[member_str]["husband"] = husband_id_str;
+								if (!qq_name_json.count(husband_id_str)) {
+									common::get_group_member_name(api, group_id, husband_id, name);
+									qq_name_json[husband_id_str] = name;
+								}
+							}
+							if (master_id) {
+								const std::string master_id_str = std::to_string(master_id);
+								relations_json[member_str]["master"] = master_id_str;
+								if (!qq_name_json.count(master_id_str)) {
+									common::get_group_member_name(api, group_id, master_id, name);
+									qq_name_json[master_id_str] = name;
+								}
+							}
+							if (mother_id) {
+								const std::string mother_id_str = std::to_string(mother_id);
+								relations_json[member_str]["mother"] = mother_id_str;
+								if (!qq_name_json.count(mother_id_str)) {
+									common::get_group_member_name(api, group_id, mother_id, name);
+									qq_name_json[mother_id_str] = name;
+								}
+							}
+							if (wife_id) {
+								const std::string wife_id_str = std::to_string(wife_id);
+								relations_json[member_str]["wife"] = wife_id_str;
+								if (!qq_name_json.count(wife_id_str)) {
+									common::get_group_member_name(api, group_id, wife_id, name);
+									qq_name_json[wife_id_str] = name;
+								}
+							}
+						}
+						{
+							std::ofstream ofs_qq_name(common::RELATION_DIR + "qq_name.json");
+							ofs_qq_name << qq_name_json.dump();
+							std::ofstream ofs_relations(common::RELATION_DIR + "relations.json");
+							ofs_relations << relations_json.dump();
+						}
+						const std::string cmd = "python3 " + common::SCRIPT_DIR + "relations.py " + common::RELATION_DIR + "qq_name.json " + common::RELATION_DIR + "relations.json " + file_name;
+						system(cmd.c_str());
+					}
+					json params{};
+					params["group_id"] = group_id;
+					json message = json::array();
+					common::add_image_message(message, "file:///" + file_name);
 					params["message"] = message;
 					api("send_group_msg", params);
 				}
@@ -125,7 +223,7 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 					}
 					else {
 						const std::string random_file = files[time % files.size()];
-						common::add_image_message(message, "file:///" + common::SEX_DIR + "/" + random_file);
+						common::add_image_message(message, "file:///" + common::SEX_DIR + random_file);
 					}
 					params["message"] = message;
 					api("send_group_msg", params);
@@ -184,7 +282,7 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 					else {
 						const std::string random_file = files[time % files.size()];
 						common::add_text_message(message, "推荐" + common::remove_extension(random_file));
-						common::add_image_message(message, "file:///" + dir + "/" + random_file);
+						common::add_image_message(message, "file:///" + dir + random_file);
 					}
 					params["message"] = message;
 					api("send_group_msg", params);
@@ -240,7 +338,7 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 									const auto image_data = message_json.at("data");
 									const std::string file_name = image_data.at("file").get<std::string>();
 									const std::string url = image_data.at("url").get<std::string>();
-									const std::string save_path = "../../../../../" + common::SEX_DIR + "/" + file_name;
+									const std::string save_path = "../../../../../" + common::SEX_DIR + file_name;
 									const auto response = api("download_file", json{ {"url", url}, {"name", save_path} });
 									const int64_t retcode = response["retcode"].get<int64_t>();
 									if (retcode == 0) {
@@ -276,7 +374,7 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 								if (message_json.at("type") == "image") {
 									const auto image_data = message_json.at("data");
 									const std::string url = image_data.at("url").get<std::string>();
-									const std::string save_path = "../../../../../" + common::EAT_DIR + "/" + word;
+									const std::string save_path = "../../../../../" + common::EAT_DIR + word;
 									const auto response = api("download_file", json{ {"url", url}, {"name", save_path} });
 									const int64_t retcode = response["retcode"].get<int64_t>();
 									if (retcode == 0) {
@@ -316,7 +414,7 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 								if (message_json.at("type") == "image") {
 									const auto image_data = message_json.at("data");
 									const std::string url = image_data.at("url").get<std::string>();
-									const std::string save_path = "../../../../../" + common::DRINK_DIR + "/" + word;
+									const std::string save_path = "../../../../../" + common::DRINK_DIR + word;
 									const auto response = api("download_file", json{ {"url", url}, {"name", save_path} });
 									const int64_t retcode = response["retcode"].get<int64_t>();
 									if (retcode == 0) {
@@ -408,9 +506,12 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 	}
 }
 /*
-关系图
+clang-format
+快速删除文件
 优化传旨功能
 加日志功能
+性能优化
+戳一戳哈气
 今日说法
 求婚
 崩溃自动重启
@@ -419,7 +520,6 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 群分析*
 用户画像*
 message预处理（去掉首尾空格）
-快速删除文件
 1. 近期群成员变动情况
 3. 大富翁
 4. vrc id 绑定

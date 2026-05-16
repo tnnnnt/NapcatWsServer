@@ -24,6 +24,10 @@ void CommandRouter::daily(ApiFunc api) {
 		std::lock_guard<std::mutex> lock(common::today_group_member_message_number_mutex);
 		common::today_group_member_message_number.clear();
 	}
+	{
+		std::lock_guard<std::mutex> lock(common::group_member_relations_mutex);
+		common::group_member_relations.clear();
+	}
 }
 void CommandRouter::load_config() {
 	std::ifstream ifs(common::CONFIG_FILE);
@@ -125,9 +129,8 @@ void CommandRouter::send_today_group_member_message_number_data(const int64_t& g
 	for (size_t i = 0; i < k; ++i) {
 		const int64_t user_id = member_message_rank[i].first;
 		const int message_num = member_message_rank[i].second;
-		const auto group_member_info = api("get_group_member_info", json{ {"group_id", std::to_string(group_id)}, { "user_id", std::to_string(user_id) } })["data"];
-		const std::string card = group_member_info.at("card").get<std::string>();
-		const std::string user_name = card == "" ? group_member_info.at("nickname").get<std::string>() : card;
+		std::string user_name;
+		common::get_group_member_name(api, group_id, user_id, user_name);
 		common::add_text_message(message, std::to_string(i + 1) + ". " + user_name + " 发言数：" + std::to_string(message_num) + "\n");
 		common::add_image_message(message, "https://q.qlogo.cn/g?b=qq&nk=" + std::to_string(user_id) + "&s=1");
 	}
