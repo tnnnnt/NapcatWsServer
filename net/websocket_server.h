@@ -1,6 +1,6 @@
 #pragma once
-#include <boost/beast.hpp>
 #include <boost/asio.hpp>
+#include <boost/beast.hpp>
 #include <functional>
 
 namespace beast = boost::beast;
@@ -9,13 +9,13 @@ namespace net = boost::asio;
 using tcp = net::ip::tcp;
 
 class WebSocketServer {
-public:
+  public:
 	using SessionHandler = std::function<void(websocket::stream<tcp::socket>)>;
 
 	WebSocketServer(int port);
 
 	void start(SessionHandler handler);
 
-private:
+  private:
 	int port_;
 };

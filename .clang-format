@@ -1,0 +1,33 @@
+BasedOnStyle: LLVM
+
+IndentWidth: 4
+TabWidth: 4
+UseTab: Always
+
+ColumnLimit: 120
+
+BreakBeforeBraces: Attach
+
+PointerAlignment: Left
+ReferenceAlignment: Left
+
+SortIncludes: true
+
+InsertBraces: true
+
+IncludeCategories:
+  - Regex: '^<.*>'
+    Priority: 1
+  - Regex: '^".*"'
+    Priority: 2
+
+SpaceBeforeParens: ControlStatements
+
+AllowShortIfStatementsOnASingleLine: false
+
+BinPackArguments: false
+BinPackParameters: false
+
+NamespaceIndentation: All
+
+MaxEmptyLinesToKeep: 1
