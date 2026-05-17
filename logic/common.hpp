@@ -122,7 +122,8 @@ namespace common {
 		const int64_t retcode = response["retcode"].get<int64_t>();
 		if (retcode) {
 			name = api("get_stranger_info", json{{"user_id", user_id}})["data"].at("nick").get<std::string>();
-		} else {
+		}
+		else {
 			const auto group_member_info = response["data"];
 			const std::string card = group_member_info.at("card").get<std::string>();
 			name = card == "" ? group_member_info.at("nickname").get<std::string>() : card;

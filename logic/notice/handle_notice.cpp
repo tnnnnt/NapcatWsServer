@@ -6,8 +6,10 @@
 void HandleNotice::start(const json& event, std::function<json(const std::string&, const json&)> api) {
 	const std::string notice_type = event.at("notice_type").get<std::string>();
 	if (notice_type == "group_upload") {
-	} else if (notice_type == "group_admin") {
-	} else if (notice_type == "group_decrease") {
+	}
+	else if (notice_type == "group_admin") {
+	}
+	else if (notice_type == "group_decrease") {
 		const auto group_id = event.at("group_id").get<int64_t>();
 		const auto user_id = event.at("user_id").get<int64_t>();
 		CommandRouter::del_today_group_member_message_number_data(group_id, user_id);
@@ -34,7 +36,8 @@ void HandleNotice::start(const json& event, std::function<json(const std::string
 				api("send_group_msg", params);
 			}
 		}
-	} else if (notice_type == "group_increase") {
+	}
+	else if (notice_type == "group_increase") {
 		const auto group_id = event.at("group_id").get<int64_t>();
 		const auto user_id = event.at("user_id").get<int64_t>();
 		json params{};
@@ -44,10 +47,15 @@ void HandleNotice::start(const json& event, std::function<json(const std::string
 		common::add_text_message(message, " 欢迎喵~爱你喵~");
 		params["message"] = message;
 		api("send_group_msg", params);
-	} else if (notice_type == "group_ban") {
-	} else if (notice_type == "friend_add") {
-	} else if (notice_type == "group_recall") {
-	} else if (notice_type == "friend_recall") {
-	} else if (notice_type == "notify") {
+	}
+	else if (notice_type == "group_ban") {
+	}
+	else if (notice_type == "friend_add") {
+	}
+	else if (notice_type == "group_recall") {
+	}
+	else if (notice_type == "friend_recall") {
+	}
+	else if (notice_type == "notify") {
 	}
 }

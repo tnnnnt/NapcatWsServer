@@ -50,7 +50,8 @@ void BotClient::read_loop() {
 			msg = boost::beast::buffers_to_string(buffer.data());
 			json j = json::parse(msg);
 			handle_post(j);
-		} catch (std::exception& e) {
+		}
+		catch (std::exception& e) {
 			std::cout << "read error: " << e.what() << std::endl;
 			std::cout << "msg: \n" << msg << std::endl;
 			std::this_thread::sleep_for(std::chrono::seconds(common::TIME_SAVE_INTERVAL));
@@ -115,7 +116,8 @@ void BotClient::sender_loop() {
 			}
 			std::lock_guard<std::mutex> lock(ws_mutex_);
 			ws_.write(boost::asio::buffer(msg.dump()));
-		} catch (std::exception& e) {
+		}
+		catch (std::exception& e) {
 			std::cout << "send error: " << e.what() << std::endl;
 		}
 	}

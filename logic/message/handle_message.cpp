@@ -14,7 +14,8 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 		common::add_text_message(message, "暂时不支持私聊，请催促tnt更新");
 		params["message"] = message;
 		api("send_private_msg", params);
-	} else if (message_type == "group") {
+	}
+	else if (message_type == "group") {
 		const auto time = event.at("time").get<int64_t>() + common::TIME_ZONE_OFFSET; // 转为北京时间
 		const int64_t group_id = event.at("group_id").get<int64_t>();
 		const int64_t user_id = event.at("user_id").get<int64_t>();
@@ -39,6 +40,7 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 			const std::string type = seg_obj.at("type").get<std::string>();
 			if (type == "text") {
 				const std::string text = seg_obj.at("data").at("text").get<std::string>();
+				std::string word;
 				if (text == "今日运势") {
 					json params{};
 					params["group_id"] = group_id;
@@ -58,7 +60,8 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 												 fortunes[5] + "\n幸运数字：" + std::to_string(luckey_num));
 					params["message"] = message;
 					api("send_group_msg", params);
-				} else if (text == "今日老婆" || text == "今日老公" || text == "今日妈妈" || text == "今日主人") {
+				}
+				else if (text == "今日老婆" || text == "今日老公" || text == "今日妈妈" || text == "今日主人") {
 					std::vector<int64_t> temp;
 					{
 						std::lock_guard<std::mutex> lock(common::group_members_mutex);
@@ -75,25 +78,32 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 						if (text == "今日老婆") {
 							if (member_relations[user_id].wife_id) {
 								match_id = member_relations[user_id].wife_id;
-							} else {
+							}
+							else {
 								match_id = member_relations[user_id].wife_id = temp[0];
 							}
-						} else if (text == "今日老公") {
+						}
+						else if (text == "今日老公") {
 							if (member_relations[user_id].husband_id) {
 								match_id = member_relations[user_id].husband_id;
-							} else {
+							}
+							else {
 								match_id = member_relations[user_id].husband_id = temp[std::min(member_count - 1, 1)];
 							}
-						} else if (text == "今日妈妈") {
+						}
+						else if (text == "今日妈妈") {
 							if (member_relations[user_id].mother_id) {
 								match_id = member_relations[user_id].mother_id;
-							} else {
+							}
+							else {
 								match_id = member_relations[user_id].mother_id = temp[std::min(member_count - 1, 2)];
 							}
-						} else if (text == "今日主人") {
+						}
+						else if (text == "今日主人") {
 							if (member_relations[user_id].master_id) {
 								match_id = member_relations[user_id].master_id;
-							} else {
+							}
+							else {
 								match_id = member_relations[user_id].master_id = temp[std::min(member_count - 1, 3)];
 							}
 						}
@@ -107,11 +117,14 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 					std::string last_sentence;
 					if (text == "今日老婆") {
 						last_sentence = "请好好对待她哦~";
-					} else if (text == "今日老公") {
+					}
+					else if (text == "今日老公") {
 						last_sentence = "请好好对待他哦~";
-					} else if (text == "今日妈妈") {
+					}
+					else if (text == "今日妈妈") {
 						last_sentence = "快去叫妈妈！";
-					} else if (text == "今日主人") {
+					}
+					else if (text == "今日主人") {
 						last_sentence = "快去叫主人！";
 					}
 					common::add_text_message(message, "\n你的" + text + "是【" + match_name + "】\n" + last_sentence);
@@ -119,7 +132,8 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 											  "https://q.qlogo.cn/g?b=qq&nk=" + std::to_string(match_id) + "&s=4");
 					params["message"] = message;
 					api("send_group_msg", params);
-				} else if (text == "关系图") {
+				}
+				else if (text == "关系图") {
 					const std::string file_name = common::RELATION_DIR + std::to_string(group_id) + ".png";
 					{
 						std::lock_guard<std::mutex> lock(common::group_member_relations_mutex);
@@ -188,9 +202,11 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 					common::add_image_message(message, "file:///" + file_name);
 					params["message"] = message;
 					api("send_group_msg", params);
-				} else if (text == "今日龙王榜") {
+				}
+				else if (text == "今日龙王榜") {
 					CommandRouter::send_today_group_member_message_number_data(group_id, api);
-				} else if (text == "订阅通知") {
+				}
+				else if (text == "订阅通知") {
 					CommandRouter::add_notice_group_member(group_id, user_id);
 					json params{};
 					params["group_id"] = group_id;
@@ -199,7 +215,8 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 					common::add_text_message(message, "\n 订阅成功喵~");
 					params["message"] = message;
 					api("send_group_msg", params);
-				} else if (text == "取消订阅") {
+				}
+				else if (text == "取消订阅") {
 					CommandRouter::del_notice_group_member(group_id, user_id);
 					json params{};
 					params["group_id"] = group_id;
@@ -208,7 +225,8 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 					common::add_text_message(message, "\n 取消订阅成功喵~");
 					params["message"] = message;
 					api("send_group_msg", params);
-				} else if (text == "来点色图") {
+				}
+				else if (text == "来点色图") {
 					std::vector<std::string> files;
 					common::get_files(common::SEX_DIR, files);
 					json params{};
@@ -216,13 +234,15 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 					json message = json::array();
 					if (files.empty()) {
 						common::add_text_message(message, "没有色图了喵~");
-					} else {
+					}
+					else {
 						const std::string random_file = files[time % files.size()];
 						common::add_image_message(message, "file:///" + common::SEX_DIR + random_file);
 					}
 					params["message"] = message;
 					api("send_group_msg", params);
-				} else if (text[0] == '/') {
+				}
+				else if (text[0] == '/') {
 					if (common::ADMIN_QQ == user_id) {
 						const std::string command = text.substr(1);
 						json params{};
@@ -252,7 +272,8 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 						common::add_text_message(message, "\n\n" + command);
 						params["message"] = message;
 						api("send_group_msg", params);
-					} else {
+					}
+					else {
 						json params{};
 						params["group_id"] = group_id;
 						json message = json::array();
@@ -261,8 +282,9 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 						params["message"] = message;
 						api("send_group_msg", params);
 					}
-				} else if (text.find("吃什么") != std::string::npos || text.find("吃啥") != std::string::npos ||
-						   text.find("喝什么") != std::string::npos || text.find("喝啥") != std::string::npos) {
+				}
+				else if (text.find("吃什么") != std::string::npos || text.find("吃啥") != std::string::npos ||
+						 text.find("喝什么") != std::string::npos || text.find("喝啥") != std::string::npos) {
 					const bool is_eat = text.find("吃") != std::string::npos;
 					const auto& dir = is_eat ? common::EAT_DIR : common::DRINK_DIR;
 					std::vector<std::string> files;
@@ -272,7 +294,8 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 					json message = json::array();
 					if (files.empty()) {
 						common::add_text_message(message, is_eat ? "别吃" : "别喝");
-					} else {
+					}
+					else {
 						const std::string random_file = files[time % files.size()];
 						common::add_text_message(message, "推荐" + common::remove_extension(random_file));
 						common::add_image_message(message, "file:///" + dir + random_file);
@@ -281,7 +304,8 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 					api("send_group_msg", params);
 				}
 			}
-		} else if (message_size == 2) {
+		}
+		else if (message_size == 2) {
 			const auto& seg_obj0 = message_array[0];
 			const std::string type0 = seg_obj0.at("type").get<std::string>();
 			const auto& seg_obj1 = message_array[1];
@@ -301,7 +325,8 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 						}
 					}
 				}
-			} else if (type0 == "reply") {
+			}
+			else if (type0 == "reply") {
 				const std::string message_id = seg_obj0.at("data").at("id").get<std::string>();
 				if (type1 == "text") {
 					const std::string text = seg_obj1.at("data").at("text").get<std::string>();
@@ -315,7 +340,8 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 							common::add_text_message(message, "\n权限不足");
 							params["message"] = message;
 							api("send_group_msg", params);
-						} else {
+						}
+						else {
 							json params{};
 							params["message_id"] = message_id;
 							const auto messages_json = api("get_msg", params)["data"].at("message");
@@ -333,7 +359,8 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 									const int64_t retcode = response["retcode"].get<int64_t>();
 									if (retcode == 0) {
 										++suc;
-									} else {
+									}
+									else {
 										common::add_text_message(message,
 																 response["message"].get<std::string>() + "\n");
 									}
@@ -345,7 +372,8 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 							params["message"] = message;
 							api("send_group_msg", params);
 						}
-					} else if (common::starts_with_and_trim(text, "/吃！", word)) {
+					}
+					else if (common::starts_with_and_trim(text, "/吃！", word)) {
 						if (common::is_ban(user_id)) {
 							json params{};
 							params["group_id"] = group_id;
@@ -354,7 +382,8 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 							common::add_text_message(message, "\n权限不足");
 							params["message"] = message;
 							api("send_group_msg", params);
-						} else {
+						}
+						else {
 							json params{};
 							params["message_id"] = message_id;
 							const auto messages_json = api("get_msg", params)["data"].at("message");
@@ -376,13 +405,15 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 							json message = json::array();
 							if (suc) {
 								common::add_text_message(message, "Rusk最喜欢吃" + word + "了！真好吃！");
-							} else {
+							}
+							else {
 								common::add_text_message(message, "呸呸呸！" + word + "真难吃！");
 							}
 							params["message"] = message;
 							api("send_group_msg", params);
 						}
-					} else if (common::starts_with_and_trim(text, "/喝！", word)) {
+					}
+					else if (common::starts_with_and_trim(text, "/喝！", word)) {
 						if (common::is_ban(user_id)) {
 							json params{};
 							params["group_id"] = group_id;
@@ -391,7 +422,8 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 							common::add_text_message(message, "\n权限不足");
 							params["message"] = message;
 							api("send_group_msg", params);
-						} else {
+						}
+						else {
 							json params{};
 							params["message_id"] = message_id;
 							const auto messages_json = api("get_msg", params)["data"].at("message");
@@ -413,7 +445,8 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 							json message = json::array();
 							if (suc) {
 								common::add_text_message(message, "吨吨吨！" + word + "真好喝！");
-							} else {
+							}
+							else {
 								common::add_text_message(message, "yue~ " + word + "真难喝！");
 							}
 							params["message"] = message;
@@ -421,65 +454,70 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 						}
 					}
 				}
-			} else if (type0 == "text") {
-				const std::string text = seg_obj0.at("data").at("text").get<std::string>();
-				if (text == "/ban") {
-					if (common::ADMIN_QQ == user_id) {
-						if (type1 == "at") {
-							const int64_t ban_user_id = std::stoll(seg_obj1.at("data").at("qq").get<std::string>());
-							std::ofstream ofs(common::BAN_FILE, std::ios::app);
-							ofs << ban_user_id << "\n";
-							ofs.close();
+				else if (type0 == "text") {
+					const std::string text = seg_obj0.at("data").at("text").get<std::string>();
+					if (text == "/ban") {
+						if (common::ADMIN_QQ == user_id) {
+							if (type1 == "at") {
+								const int64_t ban_user_id = std::stoll(seg_obj1.at("data").at("qq").get<std::string>());
+								std::ofstream ofs(common::BAN_FILE, std::ios::app);
+								ofs << ban_user_id << "\n";
+								ofs.close();
+								json params{};
+								params["group_id"] = group_id;
+								json message = json::array();
+								common::add_at_message(message, ban_user_id);
+								common::add_text_message(message, "已封禁");
+								params["message"] = message;
+								api("send_group_msg", params);
+							}
+						}
+						else {
 							json params{};
 							params["group_id"] = group_id;
 							json message = json::array();
-							common::add_at_message(message, ban_user_id);
-							common::add_text_message(message, "已封禁");
+							common::add_at_message(message, user_id);
+							common::add_text_message(message, "\n权限不足");
 							params["message"] = message;
 							api("send_group_msg", params);
 						}
-					} else {
-						json params{};
-						params["group_id"] = group_id;
-						json message = json::array();
-						common::add_at_message(message, user_id);
-						common::add_text_message(message, "\n权限不足");
-						params["message"] = message;
-						api("send_group_msg", params);
 					}
-				} else if (text == "/allow") {
-					if (common::ADMIN_QQ == user_id) {
-						if (type1 == "at") {
-							const int64_t allow_user_id = std::stoll(seg_obj1.at("data").at("qq").get<std::string>());
-							std::vector<int64_t> bans;
-							std::ifstream ifs(common::BAN_FILE);
-							int64_t ban;
-							while (ifs >> ban) {
-								bans.push_back(ban);
+					else if (text == "/allow") {
+						if (common::ADMIN_QQ == user_id) {
+							if (type1 == "at") {
+								const int64_t allow_user_id =
+									std::stoll(seg_obj1.at("data").at("qq").get<std::string>());
+								std::vector<int64_t> bans;
+								std::ifstream ifs(common::BAN_FILE);
+								int64_t ban;
+								while (ifs >> ban) {
+									bans.push_back(ban);
+								}
+								ifs.close();
+								bans.erase(std::remove(bans.begin(), bans.end(), allow_user_id), bans.end());
+								std::ofstream ofs(common::BAN_FILE);
+								for (const int64_t& ban : bans) {
+									ofs << ban << "\n";
+								}
+								ofs.close();
+								json params{};
+								params["group_id"] = group_id;
+								json message = json::array();
+								common::add_at_message(message, allow_user_id);
+								common::add_text_message(message, "已解封");
+								params["message"] = message;
+								api("send_group_msg", params);
 							}
-							ifs.close();
-							bans.erase(std::remove(bans.begin(), bans.end(), allow_user_id), bans.end());
-							std::ofstream ofs(common::BAN_FILE);
-							for (const int64_t& ban : bans) {
-								ofs << ban << "\n";
-							}
-							ofs.close();
+						}
+						else {
 							json params{};
 							params["group_id"] = group_id;
 							json message = json::array();
-							common::add_at_message(message, allow_user_id);
-							common::add_text_message(message, "已解封");
+							common::add_at_message(message, user_id);
+							common::add_text_message(message, "\n权限不足");
 							params["message"] = message;
 							api("send_group_msg", params);
 						}
-					} else {
-						json params{};
-						params["group_id"] = group_id;
-						json message = json::array();
-						common::add_at_message(message, user_id);
-						common::add_text_message(message, "\n权限不足");
-						params["message"] = message;
-						api("send_group_msg", params);
 					}
 				}
 			}
@@ -487,8 +525,14 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 	}
 }
 /*
-个人关系图提取
+重构
 快速删除文件
+今日杯子
+今日妹妹
+今日哥哥
+今日弟弟
+今日姐姐
+个人关系图提取
 优化传旨功能
 加日志功能
 性能优化

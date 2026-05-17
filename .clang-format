@@ -6,7 +6,12 @@ UseTab: Always
 
 ColumnLimit: 120
 
-BreakBeforeBraces: Attach
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterFunction: false
+  AfterControlStatement: false
+  BeforeElse: true
+  BeforeCatch: true
 
 PointerAlignment: Left
 ReferenceAlignment: Left
