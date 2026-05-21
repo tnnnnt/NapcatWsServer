@@ -454,70 +454,69 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 						}
 					}
 				}
-				else if (type0 == "text") {
-					const std::string text = seg_obj0.at("data").at("text").get<std::string>();
-					if (text == "/ban") {
-						if (common::ADMIN_QQ == user_id) {
-							if (type1 == "at") {
-								const int64_t ban_user_id = std::stoll(seg_obj1.at("data").at("qq").get<std::string>());
-								std::ofstream ofs(common::BAN_FILE, std::ios::app);
-								ofs << ban_user_id << "\n";
-								ofs.close();
-								json params{};
-								params["group_id"] = group_id;
-								json message = json::array();
-								common::add_at_message(message, ban_user_id);
-								common::add_text_message(message, "已封禁");
-								params["message"] = message;
-								api("send_group_msg", params);
-							}
-						}
-						else {
+			}
+			else if (type0 == "text") {
+				const std::string text = seg_obj0.at("data").at("text").get<std::string>();
+				if (text == "/ban") {
+					if (common::ADMIN_QQ == user_id) {
+						if (type1 == "at") {
+							const int64_t ban_user_id = std::stoll(seg_obj1.at("data").at("qq").get<std::string>());
+							std::ofstream ofs(common::BAN_FILE, std::ios::app);
+							ofs << ban_user_id << "\n";
+							ofs.close();
 							json params{};
 							params["group_id"] = group_id;
 							json message = json::array();
-							common::add_at_message(message, user_id);
-							common::add_text_message(message, "\n权限不足");
+							common::add_at_message(message, ban_user_id);
+							common::add_text_message(message, "已封禁");
 							params["message"] = message;
 							api("send_group_msg", params);
 						}
 					}
-					else if (text == "/allow") {
-						if (common::ADMIN_QQ == user_id) {
-							if (type1 == "at") {
-								const int64_t allow_user_id =
-									std::stoll(seg_obj1.at("data").at("qq").get<std::string>());
-								std::vector<int64_t> bans;
-								std::ifstream ifs(common::BAN_FILE);
-								int64_t ban;
-								while (ifs >> ban) {
-									bans.push_back(ban);
-								}
-								ifs.close();
-								bans.erase(std::remove(bans.begin(), bans.end(), allow_user_id), bans.end());
-								std::ofstream ofs(common::BAN_FILE);
-								for (const int64_t& ban : bans) {
-									ofs << ban << "\n";
-								}
-								ofs.close();
-								json params{};
-								params["group_id"] = group_id;
-								json message = json::array();
-								common::add_at_message(message, allow_user_id);
-								common::add_text_message(message, "已解封");
-								params["message"] = message;
-								api("send_group_msg", params);
+					else {
+						json params{};
+						params["group_id"] = group_id;
+						json message = json::array();
+						common::add_at_message(message, user_id);
+						common::add_text_message(message, "\n权限不足");
+						params["message"] = message;
+						api("send_group_msg", params);
+					}
+				}
+				else if (text == "/allow") {
+					if (common::ADMIN_QQ == user_id) {
+						if (type1 == "at") {
+							const int64_t allow_user_id = std::stoll(seg_obj1.at("data").at("qq").get<std::string>());
+							std::vector<int64_t> bans;
+							std::ifstream ifs(common::BAN_FILE);
+							int64_t ban;
+							while (ifs >> ban) {
+								bans.push_back(ban);
 							}
-						}
-						else {
+							ifs.close();
+							bans.erase(std::remove(bans.begin(), bans.end(), allow_user_id), bans.end());
+							std::ofstream ofs(common::BAN_FILE);
+							for (const int64_t& ban : bans) {
+								ofs << ban << "\n";
+							}
+							ofs.close();
 							json params{};
 							params["group_id"] = group_id;
 							json message = json::array();
-							common::add_at_message(message, user_id);
-							common::add_text_message(message, "\n权限不足");
+							common::add_at_message(message, allow_user_id);
+							common::add_text_message(message, "已解封");
 							params["message"] = message;
 							api("send_group_msg", params);
 						}
+					}
+					else {
+						json params{};
+						params["group_id"] = group_id;
+						json message = json::array();
+						common::add_at_message(message, user_id);
+						common::add_text_message(message, "\n权限不足");
+						params["message"] = message;
+						api("send_group_msg", params);
 					}
 				}
 			}
@@ -525,8 +524,11 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 	}
 }
 /*
+message预处理（去掉首尾空格）
 重构
+色图投票
 快速删除文件
+bot被移出群聊闪退bug
 今日杯子
 今日妹妹
 今日哥哥
@@ -544,7 +546,6 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 吃瓜省流*
 群分析*
 用户画像*
-message预处理（去掉首尾空格）
 1. 近期群成员变动情况
 3. 大富翁
 4. vrc id 绑定
