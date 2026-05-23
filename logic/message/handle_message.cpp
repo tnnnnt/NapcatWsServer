@@ -526,7 +526,7 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 /*
 message预处理（去掉首尾空格）
 重构
-色图投票
+色图投票/色图打分系统，根据分数给抽中概率加权重
 快速删除文件
 bot被移出群聊闪退bug
 今日杯子
