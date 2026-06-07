@@ -43,21 +43,66 @@ RELATION_COLOR = {
 # =============================
 # 圆形布局
 # =============================
-def circle_layout(nodes, min_dist):
-	n = len(nodes)
+def circle_layout(G, nodes, min_dist):
+    """
+    双层圆布局
 
-	if n == 1:
-		return {nodes[0]: (0, 0)}
+    核心节点（degree > 1）放内圈
+    叶子节点（degree == 1）放外圈
+    """
 
-	radius = max(min_dist * n / (2 * math.pi), 120)
+    if len(nodes) == 1:
+        return {nodes[0]: (0, 0)}
 
-	return {
-		node: (
-			radius * math.cos(2 * math.pi * i / n),
-			radius * math.sin(2 * math.pi * i / n)
-		)
-		for i, node in enumerate(nodes)
-	}
+    inner_nodes = []
+    outer_nodes = []
+
+    for node in nodes:
+        if G.degree(node) <= 1:
+            outer_nodes.append(node)
+        else:
+            inner_nodes.append(node)
+
+    # 避免全部都是叶子节点
+    if not inner_nodes:
+        inner_nodes = outer_nodes
+        outer_nodes = []
+
+    pos = {}
+
+    # =====================
+    # 内圈
+    # =====================
+
+    inner_radius = max(
+        min_dist * len(inner_nodes) / (2 * math.pi),
+        120
+    )
+
+    for i, node in enumerate(inner_nodes):
+        angle = 2 * math.pi * i / len(inner_nodes)
+
+        pos[node] = (
+            inner_radius * math.cos(angle),
+            inner_radius * math.sin(angle)
+        )
+
+    # =====================
+    # 外圈
+    # =====================
+
+    if outer_nodes:
+        outer_radius = inner_radius + 180
+
+        for i, node in enumerate(outer_nodes):
+            angle = 2 * math.pi * i / len(outer_nodes)
+
+            pos[node] = (
+                outer_radius * math.cos(angle),
+                outer_radius * math.sin(angle)
+            )
+
+    return pos
 
 
 # =============================
@@ -75,7 +120,13 @@ def multi_component_layout(G):
 	for comp in components:
 		nodes = list(comp)
 
-		sub_pos = circle_layout(nodes, MIN_DIST)
+		subgraph = G.subgraph(nodes)
+
+		sub_pos = circle_layout(
+			subgraph,
+			nodes,
+			MIN_DIST
+		)
 
 		# ⭐ 计算半径（最大距离）
 		max_r = 0
