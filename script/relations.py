@@ -1,3 +1,13 @@
+# relation_graph_final.py
+# 关系图最终版（骨架重构版）
+# 功能：
+# - 圆形头像
+# - 关系颜色图例
+# - 核心节点+叶子节点两阶段布局
+# - 最大连通子图居中
+# - 其他子图环绕布局
+# - Playwright截图
+
 import os
 import sys
 import json
@@ -8,9 +18,6 @@ from PIL import Image, ImageDraw
 from pyvis.network import Network
 from playwright.sync_api import sync_playwright
 
-# =============================
-# 全局配置
-# =============================
 MAX_NAME_LENGTH = 10
 MIN_DIST = 140
 NODE_SIZE = 40
@@ -21,377 +28,366 @@ DEVICE_SCALE = 2
 WAIT_TIME = 800
 
 EDGE_WIDTH = 3
-EDGE_OPACITY = 0.85
-
-# 子图之间间距 ⭐
-COMPONENT_GAP_X = 400
-COMPONENT_GAP_Y = 350
 
 RELATION_MAP = {
-	"wife": "老婆",
-	"mother": "妈妈",
-	"master": "主人"
+    "wife": "老婆",
+    "mother": "妈妈",
+    "master": "主人"
 }
 
 RELATION_COLOR = {
-	"老婆": "#ff4d6d",
-	"妈妈": "#51cf66",
-	"主人": "#ffd43b"
+    "老婆": "#ff4d6d",
+    "妈妈": "#51cf66",
+    "主人": "#ffd43b"
 }
 
 
-# =============================
-# 圆形布局
-# =============================
-def circle_layout(G, nodes, min_dist):
-    """
-    双层圆布局
+def get_avatar(qq):
+    path = f"avatar_{qq}.png"
+    if os.path.exists(path):
+        return path
 
-    核心节点（degree > 1）放内圈
-    叶子节点（degree == 1）放外圈
-    """
+    try:
+        r = requests.get(
+            f"https://q.qlogo.cn/g?b=qq&nk={qq}&s=100",
+            timeout=5
+        )
+        with open(path, "wb") as f:
+            f.write(r.content)
 
-    if len(nodes) == 1:
-        return {nodes[0]: (0, 0)}
+        img = Image.open(path).convert("RGBA")
+        mask = Image.new("L", img.size, 0)
+        ImageDraw.Draw(mask).ellipse(
+            (0, 0, img.size[0], img.size[1]),
+            fill=255
+        )
+        img.putalpha(mask)
+        img.save(path)
 
-    inner_nodes = []
-    outer_nodes = []
+    except Exception:
+        Image.new(
+            "RGBA",
+            (100, 100),
+            (200, 200, 200, 255)
+        ).save(path)
+
+    return path
+
+
+def component_layout(subgraph):
+    nodes = list(subgraph.nodes)
+
+    core_nodes = []
+    leaf_nodes = []
 
     for node in nodes:
-        if G.degree(node) <= 1:
-            outer_nodes.append(node)
+        if subgraph.degree(node) <= 1:
+            leaf_nodes.append(node)
         else:
-            inner_nodes.append(node)
+            core_nodes.append(node)
 
-    # 避免全部都是叶子节点
-    if not inner_nodes:
-        inner_nodes = outer_nodes
-        outer_nodes = []
+    if not core_nodes:
+        core_nodes = nodes
+        leaf_nodes = []
 
     pos = {}
 
-    # =====================
-    # 内圈
-    # =====================
-
-    inner_radius = max(
-        min_dist * len(inner_nodes) / (2 * math.pi),
+    radius = max(
+        MIN_DIST * len(core_nodes) / (2 * math.pi),
         120
     )
 
-    for i, node in enumerate(inner_nodes):
-        angle = 2 * math.pi * i / len(inner_nodes)
-
+    for i, node in enumerate(core_nodes):
+        a = 2 * math.pi * i / len(core_nodes)
         pos[node] = (
-            inner_radius * math.cos(angle),
-            inner_radius * math.sin(angle)
+            radius * math.cos(a),
+            radius * math.sin(a)
         )
 
-    # =====================
-    # 外圈
-    # =====================
+    parent_children = {}
 
-    if outer_nodes:
-        outer_radius = inner_radius + 180
+    for node in leaf_nodes:
+        neighbors = (
+            list(subgraph.predecessors(node))
+            + list(subgraph.successors(node))
+        )
 
-        for i, node in enumerate(outer_nodes):
-            angle = 2 * math.pi * i / len(outer_nodes)
+        if not neighbors:
+            continue
 
-            pos[node] = (
-                outer_radius * math.cos(angle),
-                outer_radius * math.sin(angle)
+        parent_children.setdefault(neighbors[0], []).append(node)
+
+    LEAF_DISTANCE = 180
+
+    for parent, children in parent_children.items():
+        px, py = pos[parent]
+        base = math.atan2(py, px)
+
+        for i, child in enumerate(children):
+            if len(children) == 1:
+                angle = base
+            else:
+                angle = base + (
+                    (i - (len(children)-1)/2)
+                    * math.pi/2
+                    / (len(children)-1)
+                )
+
+            pos[child] = (
+                px + LEAF_DISTANCE * math.cos(angle),
+                py + LEAF_DISTANCE * math.sin(angle)
             )
 
     return pos
 
 
-# =============================
-# ⭐ 多子图布局（核心优化）
-# =============================
 def multi_component_layout(G):
-	pos = {}
+    comps = list(nx.weakly_connected_components(G))
+    comps.sort(key=len, reverse=True)
 
-	components = list(nx.weakly_connected_components(G))
-	components.sort(key=lambda c: -len(c))
+    pos = {}
 
-	# ⭐ 存储每个子图的信息
-	comp_infos = []
+    if not comps:
+        return pos
 
-	for comp in components:
-		nodes = list(comp)
+    # 最大子图居中
+    main = G.subgraph(comps[0])
+    main_pos = component_layout(main)
 
-		subgraph = G.subgraph(nodes)
+    for k, v in main_pos.items():
+        pos[k] = v
 
-		sub_pos = circle_layout(
-			subgraph,
-			nodes,
-			MIN_DIST
-		)
+    # 其余子图环绕
+    others = comps[1:]
+    ring_radius = 800
 
-		# ⭐ 计算半径（最大距离）
-		max_r = 0
-		for x, y in sub_pos.values():
-			r = math.sqrt(x * x + y * y)
-			max_r = max(max_r, r)
+    for idx, comp in enumerate(others):
+        angle = 2 * math.pi * idx / max(len(others), 1)
 
-		comp_infos.append({
-			"nodes": nodes,
-			"pos": sub_pos,
-			"radius": max_r + NODE_SIZE * 2  # ⭐ 加上头像尺寸防止贴边
-		})
+        cx = ring_radius * math.cos(angle)
+        cy = ring_radius * math.sin(angle)
 
-	# =============================
-	# ⭐ 动态排版（关键）
-	# =============================
-	x_cursor = 0
-	y_cursor = 0
-	row_height = 0
+        sub = G.subgraph(comp)
+        sub_pos = component_layout(sub)
 
-	MAX_WIDTH = 1600  # 一行最大宽度
-
-	for comp in comp_infos:
-		r = comp["radius"]
-		diameter = r * 2
-
-		# ⭐ 换行判断
-		if x_cursor + diameter > MAX_WIDTH:
-			x_cursor = 0
-			y_cursor += row_height + 80  # 行间距
-			row_height = 0
-
-		# ⭐ 放置当前子图
-		for node, (x, y) in comp["pos"].items():
-			pos[node] = (
-				x + x_cursor + r,
-				y + y_cursor + r
-			)
-
-		# ⭐ 更新游标
-		x_cursor += diameter + 80  # 子图间距
-		row_height = max(row_height, diameter)
-
-	return pos
+        for node, (x, y) in sub_pos.items():
+            pos[node] = (x + cx, y + cy)
+    pos = avoid_overlap(pos, min_dist=140)
+    return pos
 
 
-# =============================
-# 头像处理
-# =============================
-def get_avatar(qq):
-	path = f"avatar_{qq}.png"
+def compute_canvas_size(pos, padding=300):
+    xs = [x for x, y in pos.values()]
+    ys = [y for x, y in pos.values()]
 
-	if os.path.exists(path):
-		return path
+    min_x, max_x = min(xs), max(xs)
+    min_y, max_y = min(ys), max(ys)
 
-	url = f"https://q.qlogo.cn/g?b=qq&nk={qq}&s=100"
+    width = int(max_x - min_x + padding)
+    height = int(max_y - min_y + padding)
 
-	try:
-		r = requests.get(url, timeout=5)
-		with open(path, "wb") as f:
-			f.write(r.content)
-
-		img = Image.open(path).convert("RGBA")
-		size = img.size
-
-		mask = Image.new("L", size, 0)
-		draw = ImageDraw.Draw(mask)
-		draw.ellipse((0, 0, size[0], size[1]), fill=255)
-
-		img.putalpha(mask)
-		img.save(path)
-
-	except Exception:
-		img = Image.new("RGBA", (100, 100), (200, 200, 200, 255))
-		img.save(path)
-
-	return path
+    return max(width, 800), max(height, 600)
 
 
-# =============================
-# 构建图
-# =============================
+def normalize_pos(pos):
+    xs = [x for x, y in pos.values()]
+    ys = [y for x, y in pos.values()]
+
+    min_x = min(xs)
+    min_y = min(ys)
+
+    return {
+        n: (x - min_x + 150, y - min_y + 150)
+        for n, (x, y) in pos.items()
+    }
+
+
 def build_graph(qq_name, relations):
-	G = nx.DiGraph()
+    G = nx.DiGraph()
 
-	for qq in qq_name.keys():
-		qq_name[qq] = qq_name[qq][:MAX_NAME_LENGTH]
-	for qq, name in qq_name.items():
-		G.add_node(name, image=get_avatar(qq))
+    for qq, name in qq_name.items():
+        name = name[:MAX_NAME_LENGTH]
+        G.add_node(name, image=get_avatar(qq))
+        qq_name[qq] = name
 
-	for qq, relation in relations.items():
-		src = qq_name[qq]
+    for qq, relation in relations.items():
+        src = qq_name[qq]
 
-		# husband → wife（反向）
-		if "husband" in relation:
-			dst = qq_name[relation["husband"]]
-			G.add_edge(dst, src, label="老婆")
+        if "husband" in relation:
+            dst = qq_name[relation["husband"]]
+            G.add_edge(dst, src, label="老婆")
 
-		for rel in ["wife", "mother", "master"]:
-			if rel in relation:
-				dst = qq_name[relation[rel]]
-				G.add_edge(src, dst, label=RELATION_MAP[rel])
+        for rel in ("wife", "mother", "master"):
+            if rel in relation:
+                dst = qq_name[relation[rel]]
+                G.add_edge(src, dst, label=RELATION_MAP[rel])
 
-	return G
-
-
-# =============================
-# 渲染 HTML
-# =============================
-def render_graph(G, output_html):
-	# ⭐ 使用新的布局
-	pos = multi_component_layout(G)
-
-	net = Network(height="900px", width="100%", directed=True)
-
-	for node, attr in G.nodes(data=True):
-		x, y = pos[node]
-
-		net.add_node(
-			node,
-			label=node,
-			image=attr["image"],
-			shape="circularImage",
-			x=x,
-			y=y,
-			fixed=True,
-			size=NODE_SIZE,
-			font={
-				"size": 22,
-				"strokeWidth": 4,
-				"strokeColor": "#ffffff"
-			}
-		)
-
-	for u, v, attr in G.edges(data=True):
-		color = RELATION_COLOR.get(attr["label"], "#999999")
-
-		net.add_edge(
-			u,
-			v,
-			width=EDGE_WIDTH,
-			color={
-				"color": color,
-				"opacity": EDGE_OPACITY
-			},
-			smooth={
-				"enabled": True,
-				"type": "curvedCW",
-				"roundness": 0.2
-			}
-		)
-
-	net.set_options("""
-	{
-	  "physics": { "enabled": false },
-	  "edges": {
-		"arrows": {
-		  "to": {
-			"enabled": true,
-			"scaleFactor": 0.9
-		  }
-		}
-	  }
-	}
-	""")
-
-	net.write_html(output_html)
-
-	with open(output_html, "r", encoding="utf-8") as f:
-		html = f.read()
-
-	style = """
-	<style>
-	body {
-	  margin: 0;
-	  padding: 0;
-	  overflow: hidden;
-	  background: white;
-	}
-	</style>
-	"""
-
-	legend = """
-	<div style="
-	position:absolute;
-	top:20px;
-	left:20px;
-	background:rgba(255,255,255,0.95);
-	padding:12px 16px;
-	border-radius:10px;
-	box-shadow:0 2px 8px rgba(0,0,0,0.15);
-	font-size:18px;
-	z-index:999;
-	">
-	<b>关系说明</b>
-	"""
-
-	for name, color in RELATION_COLOR.items():
-		legend += f"""
-		<div style="margin-top:6px;">
-			<span style="
-				display:inline-block;
-				width:22px;
-				height:4px;
-				background:{color};
-				margin-right:8px;
-			"></span>
-			{name}
-		</div>
-		"""
-
-	legend += "</div>"
-
-	html = html.replace("</head>", style + "</head>")
-	html = html.replace("<body>", "<body>" + legend)
-
-	with open(output_html, "w", encoding="utf-8") as f:
-		f.write(html)
+    return G
 
 
-# =============================
-# HTML → PNG
-# =============================
+def render_graph(G, html_file):
+    pos = multi_component_layout(G)
+    pos = normalize_pos(pos)
+    canvas_w, canvas_h = compute_canvas_size(pos)
+    net = Network(
+        height=f"{canvas_h}px",
+        width=f"{canvas_w}px",
+        directed=True
+    )
+
+    for node, attr in G.nodes(data=True):
+        x, y = pos[node]
+
+        net.add_node(
+            node,
+            label=node,
+            image=attr["image"],
+            shape="circularImage",
+            x=x,
+            y=y,
+            fixed=True,
+            size=NODE_SIZE
+        )
+
+    for u, v, attr in G.edges(data=True):
+        net.add_edge(
+            u,
+            v,
+            width=EDGE_WIDTH,
+            color=RELATION_COLOR.get(attr["label"], "#999999"),
+            smooth={
+                "enabled": True,
+                "type": "curvedCW",
+                "roundness": 0.2
+            }
+        )
+
+    net.set_options("""
+    {
+      "physics":{"enabled":false}
+    }
+    """)
+    legend_html = """
+    <div style="
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: rgba(255,255,255,0.9);
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 14px;
+    z-index: 9999;
+    ">
+    <b>关系图例</b><br>
+    <span style="color:#ff4d6d;">●</span> 老婆<br>
+    <span style="color:#51cf66;">●</span> 妈妈<br>
+    <span style="color:#ffd43b;">●</span> 主人<br>
+    </div>
+    """
+
+    net.html = net.html.replace("</body>", legend_html + "</body>")
+    html_raw = net.generate_html()
+
+    legend_html = """
+    <div style="
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: rgba(255,255,255,0.92);
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 14px;
+    z-index: 9999;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    ">
+    <b>关系图例</b><br>
+    <span style="color:#ff4d6d;">●</span> 老婆<br>
+    <span style="color:#51cf66;">●</span> 妈妈<br>
+    <span style="color:#ffd43b;">●</span> 主人<br>
+    </div>
+    """
+
+    html_raw = html_raw.replace("</body>", legend_html + "</body>")
+
+    with open(html_file, "w", encoding="utf-8") as f:
+        f.write(html_raw)
+
+
+def avoid_overlap(pos, min_dist=120, iterations=50):
+    nodes = list(pos.keys())
+
+    for _ in range(iterations):
+        moved = False
+
+        for i in range(len(nodes)):
+            for j in range(i + 1, len(nodes)):
+                n1, n2 = nodes[i], nodes[j]
+                x1, y1 = pos[n1]
+                x2, y2 = pos[n2]
+
+                dx = x2 - x1
+                dy = y2 - y1
+                dist = math.hypot(dx, dy)
+
+                if dist < min_dist and dist > 0:
+                    move = (min_dist - dist) / 2
+
+                    dx /= dist
+                    dy /= dist
+
+                    pos[n1] = (x1 - dx * move, y1 - dy * move)
+                    pos[n2] = (x2 + dx * move, y2 + dy * move)
+
+                    moved = True
+
+        if not moved:
+            break
+
+    return pos
+
+
 def html_to_png(html_file, output_png):
-	with sync_playwright() as p:
-		browser = p.chromium.launch(headless=True)
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
 
-		page = browser.new_page(
-			viewport={"width": VIEW_WIDTH, "height": VIEW_HEIGHT},
-			device_scale_factor=DEVICE_SCALE
-		)
+        page = browser.new_page(
+            viewport={
+                "width": VIEW_WIDTH,
+                "height": VIEW_HEIGHT
+            },
+            device_scale_factor=DEVICE_SCALE
+        )
 
-		page.goto(
-			"file://" + os.path.abspath(html_file),
-			wait_until="domcontentloaded"
-		)
+        page.goto(
+            "file://" + os.path.abspath(html_file),
+            wait_until="domcontentloaded"
+        )
 
-		page.wait_for_selector(".vis-network", timeout=5000)
-		page.wait_for_timeout(WAIT_TIME)
+        page.wait_for_timeout(WAIT_TIME)
+        page.locator(".vis-network").screenshot(
+            path=output_png
+        )
 
-		page.locator(".vis-network").screenshot(path=output_png)
-
-		browser.close()
+        browser.close()
 
 
-# =============================
-# 主函数
-# =============================
 def main():
-	qq_name_json = sys.argv[1]
-	relations_json = sys.argv[2]
-	output_png = sys.argv[3]
+    qq_json = sys.argv[1]
+    rel_json = sys.argv[2]
+    out_png = sys.argv[3]
 
-	with open(qq_name_json, "r", encoding="utf-8") as f:
-		qq_name = json.load(f)
+    with open(qq_json, "r", encoding="utf-8") as f:
+        qq_name = json.load(f)
 
-	with open(relations_json, "r", encoding="utf-8") as f:
-		relations = json.load(f)
+    with open(rel_json, "r", encoding="utf-8") as f:
+        relations = json.load(f)
 
-	G = build_graph(qq_name, relations)
+    G = build_graph(qq_name, relations)
 
-	html_file = "graph.html"
-	render_graph(G, html_file)
-	html_to_png(html_file, output_png)
+    html = "graph.html"
+    render_graph(G, html)
+    html_to_png(html, out_png)
 
 
 if __name__ == "__main__":
-	main()
+    main()
