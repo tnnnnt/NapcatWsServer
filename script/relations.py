@@ -267,25 +267,6 @@ def render_graph(G, html_file):
       "physics":{"enabled":false}
     }
     """)
-    legend_html = """
-    <div style="
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background: rgba(255,255,255,0.9);
-    padding: 10px;
-    border-radius: 8px;
-    font-size: 14px;
-    z-index: 9999;
-    ">
-    <b>关系图例</b><br>
-    <span style="color:#ff4d6d;">●</span> 老婆<br>
-    <span style="color:#51cf66;">●</span> 妈妈<br>
-    <span style="color:#ffd43b;">●</span> 主人<br>
-    </div>
-    """
-
-    net.html = net.html.replace("</body>", legend_html + "</body>")
     html_raw = net.generate_html()
 
     legend_html = """
