@@ -60,9 +60,16 @@ namespace common {
 	inline std::unordered_map<int64_t, std::unordered_map<int64_t, Relation>>
 		group_member_relations; // 群成员关系，外层 key 是 group_id，内层 key 是 user_id
 
-	// 判断字符串是否仅包含空格
-	inline bool is_only_spaces(const std::string& s) {
-		return !s.empty() && std::all_of(s.begin(), s.end(), [](char c) { return c == ' '; });
+	// 去掉字符串首尾的空白字符
+	inline void trim(std::string& str) {
+		const auto first = str.find_first_not_of(" \t\n\r\f\v");
+		if (first == std::string::npos) {
+			str.clear();
+			return;
+		}
+		const auto last = str.find_last_not_of(" \t\n\r\f\v");
+		str.erase(last + 1);
+		str.erase(0, first);
 	}
 	// 判断字符串s是否由ss开头
 	inline bool starts_with_and_trim(const std::string& s, const std::string& ss, std::string& out) {

@@ -8,17 +8,9 @@
 void HandleMessage::start(const json& event, std::function<json(const std::string&, const json&)> api) {
 	const std::string message_type = event.at("message_type").get<std::string>();
 	if (message_type == "private") {
-		json params{};
-		params["user_id"] = event.at("user_id");
-		json message = json::array();
-		common::add_text_message(message, "暂时不支持私聊，请催促tnt更新");
-		params["message"] = message;
-		api("send_private_msg", params);
 	}
 	else if (message_type == "group") {
-		const auto time = event.at("time").get<int64_t>() + common::TIME_ZONE_OFFSET; // 转为北京时间
 		const int64_t group_id = event.at("group_id").get<int64_t>();
-		const int64_t user_id = event.at("user_id").get<int64_t>();
 		if (group_id == common::TEST_GROUP) {
 			json params{};
 			params["group_id"] = group_id;
@@ -27,14 +19,36 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 			params["message"] = message;
 			api("send_group_msg", params);
 		}
+		const int64_t user_id = event.at("user_id").get<int64_t>();
 		{
 			std::lock_guard<std::mutex> lock(common::today_group_member_message_number_mutex);
 			++common::today_group_member_message_number[group_id][user_id];
 		}
-		const auto& message_array = event.at("message");
+		const auto time = event.at("time").get<int64_t>() + common::TIME_ZONE_OFFSET; // 转为北京时间
+		const std::string raw_message = event.at("raw_message").get<std::string>();
+
+		if (raw_message.find("吃什么") != std::string::npos || raw_message.find("吃啥") != std::string::npos ||
+			raw_message.find("喝什么") != std::string::npos || raw_message.find("喝啥") != std::string::npos) {
+			const bool is_eat = raw_message.find("吃") != std::string::npos;
+			const auto& dir = is_eat ? common::EAT_DIR : common::DRINK_DIR;
+			std::vector<std::string> files;
+			common::get_files(dir, files);
+			json params{};
+			params["group_id"] = group_id;
+			json message = json::array();
+			const std::string random_file = files[time % files.size()];
+			common::add_text_message(message, "推荐" + common::remove_extension(random_file));
+			common::add_image_message(message, "file:///" + dir + random_file);
+			params["message"] = message;
+			api("send_group_msg", params);
+			return;
+		}
+
 		const int64_t seed = time / 86400 + user_id; // 每天每人一个固定的 seed
+		int luckey_num = 0;							 // 初始化，避免未定义行为
+		json message_array = event.at("message");
+		filter_valid_messages(message_array);
 		const auto message_size = message_array.size();
-		int luckey_num = 0; // 初始化，避免未定义行为
 		if (message_size == 1) {
 			const auto& seg_obj = message_array[0];
 			const std::string type = seg_obj.at("type").get<std::string>();
@@ -283,23 +297,14 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 						api("send_group_msg", params);
 					}
 				}
-				else if (text.find("吃什么") != std::string::npos || text.find("吃啥") != std::string::npos ||
-						 text.find("喝什么") != std::string::npos || text.find("喝啥") != std::string::npos) {
-					const bool is_eat = text.find("吃") != std::string::npos;
-					const auto& dir = is_eat ? common::EAT_DIR : common::DRINK_DIR;
-					std::vector<std::string> files;
-					common::get_files(dir, files);
+			}
+			else if (type == "at") {
+				const int64_t qq = std::stoll(seg_obj.at("data").at("qq").get<std::string>());
+				if (qq == common::ROBOT_QQ) {
 					json params{};
 					params["group_id"] = group_id;
 					json message = json::array();
-					if (files.empty()) {
-						common::add_text_message(message, is_eat ? "别吃" : "别喝");
-					}
-					else {
-						const std::string random_file = files[time % files.size()];
-						common::add_text_message(message, "推荐" + common::remove_extension(random_file));
-						common::add_image_message(message, "file:///" + dir + random_file);
-					}
+					common::add_text_message(message, "干什么！");
 					params["message"] = message;
 					api("send_group_msg", params);
 				}
@@ -310,23 +315,7 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 			const std::string type0 = seg_obj0.at("type").get<std::string>();
 			const auto& seg_obj1 = message_array[1];
 			const std::string type1 = seg_obj1.at("type").get<std::string>();
-			if (type0 == "at") {
-				const int64_t qq = std::stoll(seg_obj0.at("data").at("qq").get<std::string>());
-				if (qq == common::ROBOT_QQ) {
-					if (type1 == "text") {
-						const std::string text = seg_obj1.at("data").at("text").get<std::string>();
-						if (common::is_only_spaces(text)) {
-							json params{};
-							params["group_id"] = group_id;
-							json message = json::array();
-							common::add_text_message(message, "干什么！");
-							params["message"] = message;
-							api("send_group_msg", params);
-						}
-					}
-				}
-			}
-			else if (type0 == "reply") {
+			if (type0 == "reply") {
 				const std::string message_id = seg_obj0.at("data").at("id").get<std::string>();
 				if (type1 == "text") {
 					const std::string text = seg_obj1.at("data").at("text").get<std::string>();
@@ -523,40 +512,51 @@ void HandleMessage::start(const json& event, std::function<json(const std::strin
 		}
 	}
 }
+void HandleMessage::filter_valid_messages(json& message_array) {
+	message_array.erase(std::remove_if(message_array.begin(),
+									   message_array.end(),
+									   [](json& message) {
+										   if (message["type"] != "text") {
+											   return false;
+										   }
+										   auto& text = message["data"]["text"].get_ref<std::string&>();
+										   common::trim(text);
+										   return text.empty();
+									   }),
+						message_array.end());
+}
 /*
-message预处理（去掉首尾空格）
 重构
+上传文件审核区
+云姐帮忙上传
+色图整理（手动）
 色图投票/色图打分系统，根据分数给抽中概率加权重
 快速删除文件
 bot被移出群聊闪退bug
-今日杯子
-今日妹妹
-今日哥哥
-今日弟弟
-今日姐姐
+可不可以
+将今日老婆等命令改为抽/换老婆，每日限制3次，增加查关系功能，增加一键抽功能
+优化生成关系图性能
 个人关系图提取
 优化传旨功能
-加日志功能
+加日志
 性能优化
 戳一戳哈气
 今日说法
 求婚
 崩溃自动重启
-简单对话*
 吃瓜省流*
 群分析*
 用户画像*
-1. 近期群成员变动情况
-3. 大富翁
-4. vrc id 绑定
-6. 群成员分布情况（性别、地域、等级等）
-7. 视频转发
-8. 指令调用统计
-9. 设置群提醒
-10. 设置群成员专属提醒
-11. 充值系统
-12. 日历
-13. 帮助菜单
-19. 统计（调用次数）
-20. vrc api调用
+大富翁
+vrc id 绑定
+群成员分布情况（性别、地域、等级等）
+视频转发
+指令调用统计
+设置群提醒
+设置群成员专属提醒
+充值系统
+日历
+帮助菜单
+统计（调用次数）
+vrc api调用
 */

@@ -7,4 +7,7 @@ using json = nlohmann::json;
 class HandleMessage {
   public:
 	static void start(const json& event, std::function<json(const std::string&, const json&)> api);
+
+  private:
+	static void filter_valid_messages(json& message_array);
 };
