@@ -43,7 +43,7 @@ void BotClient::start() {
 
 void BotClient::read_loop() {
 	std::string msg;
-	while (running_) {
+	for (;;) {
 		try {
 			boost::beast::flat_buffer buffer;
 			ws_.read(buffer);
@@ -79,14 +79,11 @@ void BotClient::handle_post(const json& j) {
 }
 
 void BotClient::worker_loop() {
-	while (running_) {
+	for (;;) {
 		json event;
 		{
 			std::unique_lock<std::mutex> lock(queue_mutex_);
-			cv_.wait(lock, [this] { return !event_queue_.empty() || !running_; });
-			if (!running_) {
-				return;
-			}
+			cv_.wait(lock, [this] { return !event_queue_.empty(); });
 			event = event_queue_.front();
 			event_queue_.pop();
 		}
@@ -97,14 +94,11 @@ void BotClient::worker_loop() {
 
 // 核心：发送线程 + 限速 + 抖动
 void BotClient::sender_loop() {
-	while (running_) {
+	for (;;) {
 		json msg;
 		{
 			std::unique_lock<std::mutex> lock(send_queue_mutex_);
-			send_cv_.wait(lock, [this] { return !send_queue_.empty() || !running_; });
-			if (!running_) {
-				return;
-			}
+			send_cv_.wait(lock, [this] { return !send_queue_.empty(); });
 			msg = send_queue_.front();
 			send_queue_.pop();
 		}

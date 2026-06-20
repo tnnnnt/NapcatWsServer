@@ -17,7 +17,6 @@ find_package(Threads REQUIRED)
 add_executable(${PROJECT_NAME}
     main.cpp
     core/bot_client.cpp
-    net/websocket_server.cpp
     logic/command_router.cpp
     logic/message/handle_message.cpp
     logic/notice/handle_notice.cpp

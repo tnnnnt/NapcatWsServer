@@ -30,8 +30,6 @@ class BotClient {
 	std::thread schedule_midnight_task_;
 	std::thread schedule_periodic_task_;
 
-	std::atomic<bool> running_{true};
-
 	// 事件队列
 	std::queue<json> event_queue_;
 	std::mutex queue_mutex_;
