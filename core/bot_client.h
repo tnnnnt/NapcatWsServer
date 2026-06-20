@@ -1,19 +1,12 @@
 #pragma once
 #include <atomic>
-#include <boost/asio.hpp>
-#include <boost/beast.hpp>
 #include <condition_variable>
 #include <future>
 #include <map>
 #include <mutex>
-#include <nlohmann/json.hpp>
 #include <queue>
 #include <thread>
-
-using json = nlohmann::json;
-namespace websocket = boost::beast::websocket;
-using tcp = boost::asio::ip::tcp;
-
+#include "../network_types.hpp"
 class BotClient {
   public:
 	BotClient(websocket::stream<tcp::socket>&& ws);

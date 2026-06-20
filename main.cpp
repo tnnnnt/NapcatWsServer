@@ -1,10 +1,7 @@
-﻿#include <boost/asio.hpp>
-#include <boost/beast.hpp>
-#include <iostream>
+﻿#include <iostream>
 #include <thread>
 #include "core/bot_client.h"
-namespace net = boost::asio;
-using tcp = net::ip::tcp;
+#include "network_types.hpp"
 constexpr int PORT = 8080;
 int main() {
 	net::io_context ioc{1};
