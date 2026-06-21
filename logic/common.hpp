@@ -5,15 +5,12 @@
 #include <fstream>
 #include <iostream>
 #include <mutex>
-#include <nlohmann/json.hpp>
 #include <random>
 #include <string>
 #include <string_view>
 #include <unordered_map>
 #include <vector>
-
-namespace fs = std::filesystem;
-
+#include "logic_types.hpp"
 namespace common {
 	inline const std::string WORK_DIR = "/home/bot/qq_robot/";				   // 替换为你的工作目录路径
 	inline const std::string CONFIG_FILE = WORK_DIR + "config.json";		   // 配置文件
@@ -103,13 +100,13 @@ namespace common {
 		}
 	}
 	// 使用指定 seed 打乱 vector 顺序（原地修改）
-	template <typename T> inline void shuffle_vector(std::vector<T>& v, int& luckey_num, const int64_t& seed) {
+	template <typename T> inline void shuffle_vector(std::vector<T>& v, int& luckey_num, int64_t seed) {
 		std::mt19937 rng(seed);
 		luckey_num = rng() % 100;
 		std::shuffle(v.begin(), v.end(), rng);
 	}
 	// 判断用户是否在黑名单中
-	inline bool is_ban(const int64_t& user_id) {
+	inline bool is_ban(int64_t user_id) {
 		std::string ban;
 		std::ifstream ifs(BAN_FILE);
 		while (std::getline(ifs, ban)) {
@@ -121,10 +118,7 @@ namespace common {
 		ifs.close();
 		return false;
 	}
-	inline void get_group_member_name(std::function<json(const std::string&, const json&)> api,
-									  const int64_t& group_id,
-									  const int64_t& user_id,
-									  std::string& name) {
+	inline void get_group_member_name(const ApiFunc& api, int64_t group_id, int64_t user_id, std::string& name) {
 		const json response = api("get_group_member_info", json{{"group_id", group_id}, {"user_id", user_id}});
 		const int64_t retcode = response["retcode"].get<int64_t>();
 		if (retcode) {
@@ -145,11 +139,11 @@ namespace common {
 		message.emplace_back(json{{"type", "image"}, {"data", json{{"file", file_path}}}});
 	}
 	//@某人
-	inline void add_at_message(json& message, const int64_t& qq) {
+	inline void add_at_message(json& message, int64_t qq) {
 		message.emplace_back(json{{"type", "at"}, {"data", json{{"qq", qq}}}});
 	}
 	// 回复
-	inline void add_reply_message(json& message, const int& message_id) {
+	inline void add_reply_message(json& message, int message_id) {
 		message.emplace_back(json{{"type", "reply"}, {"data", json{{"id", message_id}}}});
 	}
 } // namespace common

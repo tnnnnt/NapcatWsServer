@@ -3,7 +3,7 @@
 #include "../command_router.h"
 #include "../common.hpp"
 
-void HandleNotice::start(const json& event, std::function<json(const std::string&, const json&)> api) {
+void HandleNotice::start(const json& event, const ApiFunc& api) {
 	const std::string notice_type = event.at("notice_type").get<std::string>();
 	if (notice_type == "group_upload") {
 	}

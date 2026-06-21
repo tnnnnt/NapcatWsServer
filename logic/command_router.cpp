@@ -7,7 +7,7 @@
 #include "message/handle_message.h"
 #include "notice/handle_notice.h"
 
-void CommandRouter::handle(const json& event, ApiFunc api) {
+void CommandRouter::handle(const json& event, const ApiFunc& api) {
 	const std::string post_type = event.at("post_type").get<std::string>();
 	if (post_type == "message") {
 		HandleMessage::start(event, api);
@@ -20,7 +20,7 @@ void CommandRouter::handle(const json& event, ApiFunc api) {
 	else if (post_type == "meta_event") {
 	}
 }
-void CommandRouter::daily(ApiFunc api) {
+void CommandRouter::daily(const ApiFunc& api) {
 	load_config();
 	updata_group_members_data(api);
 	for (const int64_t& group_id : common::group_ids) {
@@ -53,7 +53,7 @@ void CommandRouter::load_config() {
 	common::TIME_ZONE_OFFSET = config_json.at("time_zone_offset").get<size_t>();
 	common::MIN_ACTIVITY_LEVEL = config_json.at("min_activity_level").get<size_t>();
 }
-void CommandRouter::updata_group_members_data(ApiFunc api) {
+void CommandRouter::updata_group_members_data(const ApiFunc& api) {
 	std::lock_guard<std::mutex> lock(common::group_members_mutex);
 	common::group_ids.clear();
 	common::group_members.clear();
@@ -107,11 +107,11 @@ void CommandRouter::load_today_group_member_message_number_data() {
 		}
 	}
 }
-void CommandRouter::del_today_group_member_message_number_data(const int64_t& group_id, const int64_t& user_id) {
+void CommandRouter::del_today_group_member_message_number_data(int64_t group_id, int64_t user_id) {
 	std::lock_guard<std::mutex> lock(common::today_group_member_message_number_mutex);
 	common::today_group_member_message_number[group_id].erase(user_id);
 }
-void CommandRouter::send_today_group_member_message_number_data(const int64_t& group_id, ApiFunc api) {
+void CommandRouter::send_today_group_member_message_number_data(int64_t group_id, const ApiFunc& api) {
 	json params{};
 	params["group_id"] = group_id;
 	json message = json::array();
@@ -150,7 +150,7 @@ void CommandRouter::load_notice_group_member_data(json& j) {
 	std::ifstream ifs(common::NOTICE_GROUP_MEMBER_FILE);
 	ifs >> j;
 }
-void CommandRouter::add_notice_group_member(const int64_t& group_id, const int64_t& user_id) {
+void CommandRouter::add_notice_group_member(int64_t group_id, int64_t user_id) {
 	json j;
 	load_notice_group_member_data(j);
 	const std::string group_id_str = std::to_string(group_id);
@@ -164,7 +164,7 @@ void CommandRouter::add_notice_group_member(const int64_t& group_id, const int64
 		save_notice_group_member_data(j);
 	}
 }
-void CommandRouter::del_notice_group_member(const int64_t& group_id, const int64_t& user_id) {
+void CommandRouter::del_notice_group_member(int64_t group_id, int64_t user_id) {
 	json j;
 	load_notice_group_member_data(j);
 	const std::string group_id_str = std::to_string(group_id);
@@ -175,7 +175,7 @@ void CommandRouter::del_notice_group_member(const int64_t& group_id, const int64
 		save_notice_group_member_data(j);
 	}
 }
-void CommandRouter::get_notice_members_by_group(const int64_t& group_id, std::vector<int64_t>& user_ids) {
+void CommandRouter::get_notice_members_by_group(int64_t group_id, std::vector<int64_t>& user_ids) {
 	json j;
 	load_notice_group_member_data(j);
 	const std::string group_id_str = std::to_string(group_id);

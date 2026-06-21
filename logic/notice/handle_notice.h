@@ -1,10 +1,8 @@
 #pragma once
 #include <functional>
 #include <nlohmann/json.hpp>
-
-using json = nlohmann::json;
-
+#include "../logic_types.hpp"
 class HandleNotice {
   public:
-	static void start(const json& event, std::function<json(const std::string&, const json&)> api);
+	static void start(const json& event, const ApiFunc& api);
 };
