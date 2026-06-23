@@ -16,8 +16,11 @@ namespace common {
 	inline const std::string CONFIG_FILE = WORK_DIR + "config.json";		   // 配置文件
 	inline const std::string SAVE_DIR = WORK_DIR + "save/";					   // 数据保存目录
 	inline const std::string EAT_DIR = common::WORK_DIR + "eat/";			   // 吃什么
+	inline const std::string EAT_REVIEW_DIR = common::WORK_DIR + "eat_review/"; // 吃什么审核
 	inline const std::string DRINK_DIR = common::WORK_DIR + "drink/";		   // 喝什么
+	inline const std::string DRINK_REVIEW_DIR = common::WORK_DIR + "drink_review/"; // 喝什么审核
 	inline const std::string SEX_DIR = common::WORK_DIR + "sex/";			   // 色图
+	inline const std::string SEX_REVIEW_DIR = common::WORK_DIR + "sex_review/"; // 色图审核
 	inline const std::string AVATAR_DIR = common::WORK_DIR + "avatar/";		   // 头像
 	inline const std::string RELATION_DIR = common::WORK_DIR + "relation/";	   // 关系图
 	inline const std::string SCRIPT_DIR = common::WORK_DIR + "script/";		   // 脚本

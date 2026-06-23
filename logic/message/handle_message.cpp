@@ -414,7 +414,7 @@ void HandleMessage::handle_upload_sex_image(const ApiFunc& api,
 				const auto image_data = message_json.at("data");
 				const std::string file_name = image_data.at("file").get<std::string>();
 				const std::string url = image_data.at("url").get<std::string>();
-				const std::string save_path = "../../../../../" + common::SEX_DIR + file_name;
+				const std::string save_path = "../../../../../" + common::SEX_REVIEW_DIR + file_name;
 				const auto response = api("download_file", json{{"url", url}, {"name", save_path}});
 				const int64_t retcode = response["retcode"].get<int64_t>();
 				if (retcode == 0) {
@@ -451,7 +451,7 @@ void HandleMessage::handle_upload_eat(
 			if (message_json.at("type") == "image") {
 				const auto image_data = message_json.at("data");
 				const std::string url = image_data.at("url").get<std::string>();
-				const std::string save_path = "../../../../../" + common::EAT_DIR + word;
+				const std::string save_path = "../../../../../" + common::EAT_REVIEW_DIR + word;
 				const auto response = api("download_file", json{{"url", url}, {"name", save_path}});
 				const int64_t retcode = response["retcode"].get<int64_t>();
 				if (retcode == 0) {
@@ -493,7 +493,7 @@ void HandleMessage::handle_upload_drink(const ApiFunc& api,
 			if (message_json.at("type") == "image") {
 				const auto image_data = message_json.at("data");
 				const std::string url = image_data.at("url").get<std::string>();
-				const std::string save_path = "../../../../../" + common::DRINK_DIR + word;
+				const std::string save_path = "../../../../../" + common::DRINK_REVIEW_DIR + word;
 				const auto response = api("download_file", json{{"url", url}, {"name", save_path}});
 				const int64_t retcode = response["retcode"].get<int64_t>();
 				if (retcode == 0) {
@@ -579,38 +579,41 @@ void HandleMessage::handle_allow(
 	}
 }
 /*
-重构
-上传文件审核区
+1.急急急
 增加上传色图方式（同步小云命令+直接附带图片+回复图片+忽略@等）
 色图整理（手动）
-色图投票/色图打分系统，根据分数给抽中概率加权重
-快速删除文件
-bot被移出群聊闪退bug
-可不可以
-将今日老婆等命令改为抽/换老婆，每日限制3次，增加查关系和取消功能，增加一键抽功能
-老婆跑了等
-优化生成关系图性能
-个人关系图提取
-优化传旨功能
+
+2.必要
 加日志
 性能优化
-戳一戳哈气
-今日说法
-求婚
+重构
+帮助菜单
+指令调用统计
+根据发送信息大小调整发送间隔
+
+3.有用
 崩溃自动重启
-吃瓜省流*
-群分析*
-用户画像*
-大富翁
-vrc id 绑定
+优化传旨功能
+今日说法/吃瓜省流
+群分析
+用户画像
 群成员分布情况（性别、地域、等级等）
 视频转发
-指令调用统计
 设置群提醒
 设置群成员专属提醒
-充值系统
 日历
-帮助菜单
-统计（调用次数）
+色图分级
+上传文件自动压缩
+
+4.有趣的功能
+将今日老婆等命令改为抽/换老婆，每日限制3次，增加查关系和取消功能，增加一键抽功能
+老婆跑了等
+个人关系图提取
+可不可以
+戳一戳哈气
+大富翁
+
+5.vrc相关功能
+vrc id 绑定
 vrc api调用
 */
