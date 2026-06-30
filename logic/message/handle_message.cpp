@@ -38,6 +38,10 @@ void HandleMessage::start(const json& event, const ApiFunc& api) {
 		json message_array = event.at("message");
 		filter_valid_messages(message_array);
 		const auto message_size = message_array.size();
+		if (is_commond_of_upload_sex_image(raw_message, message_array)) {
+			handle_upload_sex_image(api, message_array, group_id);
+			return;
+		}
 		if (message_size == 1) {
 			const auto& seg_obj = message_array[0];
 			const std::string type = seg_obj.at("type").get<std::string>();
@@ -86,10 +90,7 @@ void HandleMessage::start(const json& event, const ApiFunc& api) {
 				if (type1 == "text") {
 					const std::string text = seg_obj1.at("data").at("text").get<std::string>();
 					std::string word;
-					if (text == "/上传色图") {
-						handle_upload_sex_image(api, group_id, user_id, message_id);
-					}
-					else if (common::starts_with_and_trim(text, "/吃！", word)) {
+					if (common::starts_with_and_trim(text, "/吃！", word)) {
 						handle_upload_eat(api, group_id, user_id, word, message_id);
 					}
 					else if (common::starts_with_and_trim(text, "/喝！", word)) {
@@ -388,48 +389,67 @@ void HandleMessage::handle_at_robot(const ApiFunc& api, int64_t group_id) {
 	params["message"] = message;
 	api("send_group_msg", params);
 }
-void HandleMessage::handle_upload_sex_image(const ApiFunc& api,
-											int64_t group_id,
-											int64_t user_id,
-											const std::string& message_id) {
-	if (common::is_ban(user_id)) {
-		json params{};
-		params["group_id"] = group_id;
-		json message = json::array();
-		common::add_at_message(message, user_id);
-		common::add_text_message(message, "\n权限不足");
-		params["message"] = message;
-		api("send_group_msg", params);
+bool HandleMessage::is_commond_of_upload_sex_image(const std::string& raw_message, const json& message_array) {
+	if (raw_message.find("上传色图") != std::string::npos) {
+		return true;
+	}
+	bool has_upload_command = false;
+	bool has_call_yun = false;
+	for (const auto& msg : message_array) {
+		const auto& type = msg.at("type");
+		if (type == "text") {
+			const auto& text = msg.at("data").at("text").get<std::string>();
+			for (const auto& keyword : common::sex_upload_commond_keywords) {
+				has_upload_command |= text.find(keyword) != std::string::npos;
+			}
+			has_call_yun |= text.find("小云") != std::string::npos;
+		}
+		else if (type == "at") {
+			has_call_yun |= std::stoll(msg.at("data").at("qq").get<std::string>()) == common::YUN_ROBOT_QQ;
+		}
+		if (has_upload_command && has_call_yun) {
+			return true;
+		}
+	}
+	return false;
+}
+void HandleMessage::download_images(const ApiFunc& api, const json& messages, int& suc, int& total, json& message) {
+	for (const auto& msg : messages) {
+		if (msg.at("type") == "image") {
+			download_image(api, msg.at("data"), suc, total, message);
+		}
+	}
+}
+void HandleMessage::download_image(const ApiFunc& api, const json& image_data, int& suc, int& total, json& message) {
+	++total;
+	const std::string file_name = image_data.at("file").get<std::string>();
+	const std::string url = image_data.at("url").get<std::string>();
+	const std::string save_path = "../../../../../" + common::SEX_REVIEW_DIR + file_name;
+	const auto response = api("download_file", {{"url", url}, {"name", save_path}});
+	if (response.at("retcode").get<int64_t>() == 0) {
+		++suc;
 	}
 	else {
-		json params{};
-		params["message_id"] = message_id;
-		const auto messages_json = api("get_msg", params)["data"].at("message");
-		int suc = 0;
-		int total = 0;
-		json message = json::array();
-		for (const auto& message_json : messages_json) {
-			if (message_json.at("type") == "image") {
-				++total;
-				const auto image_data = message_json.at("data");
-				const std::string file_name = image_data.at("file").get<std::string>();
-				const std::string url = image_data.at("url").get<std::string>();
-				const std::string save_path = "../../../../../" + common::SEX_REVIEW_DIR + file_name;
-				const auto response = api("download_file", json{{"url", url}, {"name", save_path}});
-				const int64_t retcode = response["retcode"].get<int64_t>();
-				if (retcode == 0) {
-					++suc;
-				}
-				else {
-					common::add_text_message(message, response["message"].get<std::string>() + "\n");
-				}
-			}
-		}
-		params["group_id"] = group_id;
-		common::add_text_message(message, "上传完成！成功率：" + std::to_string(suc) + "/" + std::to_string(total));
-		params["message"] = message;
-		api("send_group_msg", params);
+		common::add_text_message(message, response.at("message").get<std::string>() + "\n");
 	}
+}
+void HandleMessage::handle_upload_sex_image(const ApiFunc& api, const json& message_array, int64_t group_id) {
+	int suc = 0;
+	int total = 0;
+	json message = json::array();
+	for (const auto& msg : message_array) {
+		const auto& type = msg.at("type");
+		if (type == "image") {
+			download_image(api, msg.at("data"), suc, total, message);
+		}
+		else if (type == "reply") {
+			json params{{"message_id", msg.at("data").at("id")}};
+			const auto reply_messages = api("get_msg", params).at("data").at("message");
+			download_images(api, reply_messages, suc, total, message);
+		}
+	}
+	common::add_text_message(message, "上传完成！成功率：" + std::to_string(suc) + "/" + std::to_string(total));
+	api("send_group_msg", {{"group_id", group_id}, {"message", message}});
 }
 void HandleMessage::handle_upload_eat(
 	const ApiFunc& api, int64_t group_id, int64_t user_id, const std::string& word, const std::string& message_id) {
@@ -472,9 +492,8 @@ void HandleMessage::handle_upload_eat(
 		api("send_group_msg", params);
 	}
 }
-void HandleMessage::handle_upload_drink(const ApiFunc& api,
-	int64_t group_id,
-	int64_t user_id, const std::string& word, const std::string& message_id) {
+void HandleMessage::handle_upload_drink(
+	const ApiFunc& api, int64_t group_id, int64_t user_id, const std::string& word, const std::string& message_id) {
 	if (common::is_ban(user_id)) {
 		json params{};
 		params["group_id"] = group_id;
@@ -580,8 +599,7 @@ void HandleMessage::handle_allow(
 }
 /*
 1.急急急
-增加上传色图方式（同步小云命令+直接附带图片+回复图片+忽略@等）
-色图整理（手动）
+封装ban改为所有指令都不允许，allow改为所有指令都允许
 
 2.必要
 加日志
@@ -590,6 +608,9 @@ void HandleMessage::handle_allow(
 帮助菜单
 指令调用统计
 根据发送信息大小调整发送间隔
+功能开关
+测试群写入配置文件
+运势文件只读一次
 
 3.有用
 崩溃自动重启
@@ -602,8 +623,11 @@ void HandleMessage::handle_allow(
 设置群提醒
 设置群成员专属提醒
 日历
-色图分级
+色图分级（来点色图按各群配置xp，也可指定色图库）
 上传文件自动压缩
+部分命令去掉/
+快速添加运势词
+快速添加色图上传关键词
 
 4.有趣的功能
 将今日老婆等命令改为抽/换老婆，每日限制3次，增加查关系和取消功能，增加一键抽功能
@@ -612,6 +636,7 @@ void HandleMessage::handle_allow(
 可不可以
 戳一戳哈气
 大富翁
+发送表情包
 
 5.vrc相关功能
 vrc id 绑定

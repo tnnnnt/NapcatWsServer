@@ -12,20 +12,22 @@
 #include <vector>
 #include "logic_types.hpp"
 namespace common {
-	inline const std::string WORK_DIR = "/home/bot/qq_robot/";				   // 替换为你的工作目录路径
-	inline const std::string CONFIG_FILE = WORK_DIR + "config.json";		   // 配置文件
-	inline const std::string SAVE_DIR = WORK_DIR + "save/";					   // 数据保存目录
-	inline const std::string EAT_DIR = common::WORK_DIR + "eat/";			   // 吃什么
-	inline const std::string EAT_REVIEW_DIR = common::WORK_DIR + "eat_review/"; // 吃什么审核
-	inline const std::string DRINK_DIR = common::WORK_DIR + "drink/";		   // 喝什么
+	inline const std::string WORK_DIR = "/home/bot/qq_robot/";						// 替换为你的工作目录路径
+	inline const std::string CONFIG_FILE = WORK_DIR + "config.json";				// 配置文件
+	inline const std::string SAVE_DIR = WORK_DIR + "save/";							// 数据保存目录
+	inline const std::string EAT_DIR = common::WORK_DIR + "eat/";					// 吃什么
+	inline const std::string EAT_REVIEW_DIR = common::WORK_DIR + "eat_review/";		// 吃什么审核
+	inline const std::string DRINK_DIR = common::WORK_DIR + "drink/";				// 喝什么
 	inline const std::string DRINK_REVIEW_DIR = common::WORK_DIR + "drink_review/"; // 喝什么审核
-	inline const std::string SEX_DIR = common::WORK_DIR + "sex/";			   // 色图
-	inline const std::string SEX_REVIEW_DIR = common::WORK_DIR + "sex_review/"; // 色图审核
-	inline const std::string AVATAR_DIR = common::WORK_DIR + "avatar/";		   // 头像
-	inline const std::string RELATION_DIR = common::WORK_DIR + "relation/";	   // 关系图
-	inline const std::string SCRIPT_DIR = common::WORK_DIR + "script/";		   // 脚本
-	inline const std::string FORTUNE_FILE = common::SAVE_DIR + "fortunes.txt"; // 运势文件
-	inline const std::string BAN_FILE = common::SAVE_DIR + "ban.txt";		   // 封禁用户文件
+	inline const std::string SEX_DIR = common::WORK_DIR + "sex/";					// 色图
+	inline const std::string SEX_REVIEW_DIR = common::WORK_DIR + "sex_review/";		// 色图审核
+	inline const std::string AVATAR_DIR = common::WORK_DIR + "avatar/";				// 头像
+	inline const std::string RELATION_DIR = common::WORK_DIR + "relation/";			// 关系图
+	inline const std::string SCRIPT_DIR = common::WORK_DIR + "script/";				// 脚本
+	inline const std::string FORTUNE_FILE = common::SAVE_DIR + "fortunes.txt";		// 运势文件
+	inline const std::string SEX_UPLOAD_COMMOND_KEYWORD_FILE =
+		common::SAVE_DIR + "sex_upload_commond_keyword.txt";		  // 上传色图命令关键字文件
+	inline const std::string BAN_FILE = common::SAVE_DIR + "ban.txt"; // 封禁用户文件
 	inline const std::string NOTICE_GROUP_MEMBER_FILE = common::SAVE_DIR + "notice_group_member.json"; // 群公告成员文件
 	inline const std::string TODAY_GROUP_MEMBER_MESSAGE_NUMBER_FILE =
 		common::SAVE_DIR + "today_group_member_message_number.json"; // 今日群成员发言数文件
@@ -33,6 +35,7 @@ namespace common {
 
 	inline int64_t ADMIN_QQ;		  // 管理员 QQ 号
 	inline int64_t ROBOT_QQ;		  // 机器人 QQ 号
+	inline int64_t YUN_ROBOT_QQ;	  // 小云机器人 QQ 号
 	inline size_t POOL_SIZE;		  // 线程池大小
 	inline size_t RANK_SIZE;		  // 排行榜大小
 	inline size_t BASE_DELAY;		  // 基础延迟（秒）
@@ -40,6 +43,8 @@ namespace common {
 	inline size_t TIME_SAVE_INTERVAL; // 数据保存时间间隔（秒）
 	inline size_t TIME_ZONE_OFFSET;	  // 时区偏移（秒）
 	inline size_t MIN_ACTIVITY_LEVEL; // 最小活跃度要求（群等级）
+
+	inline std::vector<std::string> sex_upload_commond_keywords; // 上传色图命令关键字列表
 
 	inline std::mutex group_members_mutex;										   // 保护 group_members 的互斥锁
 	inline std::vector<int64_t> group_ids;										   // 群列表

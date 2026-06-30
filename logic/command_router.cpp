@@ -36,15 +36,16 @@ void CommandRouter::daily(const ApiFunc& api) {
 	}
 }
 void CommandRouter::load_config() {
-	std::ifstream ifs(common::CONFIG_FILE);
-	if (!ifs.is_open()) {
+	std::ifstream ifs_config(common::CONFIG_FILE);
+	if (!ifs_config.is_open()) {
 		std::cerr << "无法打开配置文件: " << common::CONFIG_FILE << std::endl;
 		return;
 	}
-	json config_json;
-	ifs >> config_json;
+	json config_json{};
+	ifs_config >> config_json;
 	common::ADMIN_QQ = config_json.at("admin_qq").get<int64_t>();
 	common::ROBOT_QQ = config_json.at("robot_qq").get<int64_t>();
+	common::YUN_ROBOT_QQ = config_json.at("yun_robot_qq").get<int64_t>();
 	common::POOL_SIZE = config_json.at("pool_size").get<size_t>();
 	common::RANK_SIZE = config_json.at("rank_size").get<size_t>();
 	common::BASE_DELAY = config_json.at("base_delay").get<size_t>();
@@ -52,6 +53,18 @@ void CommandRouter::load_config() {
 	common::TIME_SAVE_INTERVAL = config_json.at("time_save_interval").get<size_t>();
 	common::TIME_ZONE_OFFSET = config_json.at("time_zone_offset").get<size_t>();
 	common::MIN_ACTIVITY_LEVEL = config_json.at("min_activity_level").get<size_t>();
+	ifs_config.close();
+
+	std::ifstream ifs_sex_upload_commond_keyword(common::SEX_UPLOAD_COMMOND_KEYWORD_FILE);
+	if (!ifs_sex_upload_commond_keyword.is_open()) {
+		std::cerr << "无法打开上传色图命令关键字文件: " << common::SEX_UPLOAD_COMMOND_KEYWORD_FILE << std::endl;
+		return;
+	}
+	std::string sex_upload_commond_keyword;
+	while (std::getline(ifs_sex_upload_commond_keyword, sex_upload_commond_keyword)) {
+		common::sex_upload_commond_keywords.push_back(sex_upload_commond_keyword);
+	}
+	ifs_sex_upload_commond_keyword.close();
 }
 void CommandRouter::updata_group_members_data(const ApiFunc& api) {
 	std::lock_guard<std::mutex> lock(common::group_members_mutex);
@@ -83,7 +96,7 @@ void CommandRouter::updata_group_members_data(const ApiFunc& api) {
 }
 void CommandRouter::save_today_group_member_message_number_data() {
 	std::lock_guard<std::mutex> lock(common::today_group_member_message_number_mutex);
-	json j;
+	json j{};
 	for (const auto& group_pair : common::today_group_member_message_number) {
 		const std::string group_id = std::to_string(group_pair.first);
 		for (const auto& user_pair : group_pair.second) {
@@ -96,7 +109,7 @@ void CommandRouter::save_today_group_member_message_number_data() {
 }
 void CommandRouter::load_today_group_member_message_number_data() {
 	std::lock_guard<std::mutex> lock(common::today_group_member_message_number_mutex);
-	json j;
+	json j{};
 	std::ifstream ifs(common::TODAY_GROUP_MEMBER_MESSAGE_NUMBER_FILE);
 	ifs >> j;
 	for (auto& [group_id_str, users] : j.items()) {
@@ -151,7 +164,7 @@ void CommandRouter::load_notice_group_member_data(json& j) {
 	ifs >> j;
 }
 void CommandRouter::add_notice_group_member(int64_t group_id, int64_t user_id) {
-	json j;
+	json j{};
 	load_notice_group_member_data(j);
 	const std::string group_id_str = std::to_string(group_id);
 	const std::string user_id_str = std::to_string(user_id);
@@ -165,7 +178,7 @@ void CommandRouter::add_notice_group_member(int64_t group_id, int64_t user_id) {
 	}
 }
 void CommandRouter::del_notice_group_member(int64_t group_id, int64_t user_id) {
-	json j;
+	json j{};
 	load_notice_group_member_data(j);
 	const std::string group_id_str = std::to_string(group_id);
 	const std::string user_id_str = std::to_string(user_id);
@@ -176,7 +189,7 @@ void CommandRouter::del_notice_group_member(int64_t group_id, int64_t user_id) {
 	}
 }
 void CommandRouter::get_notice_members_by_group(int64_t group_id, std::vector<int64_t>& user_ids) {
-	json j;
+	json j{};
 	load_notice_group_member_data(j);
 	const std::string group_id_str = std::to_string(group_id);
 	if (j.contains(group_id_str)) {

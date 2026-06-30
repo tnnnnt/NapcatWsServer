@@ -18,8 +18,10 @@ class HandleMessage {
 	static void handle_get_sex_image(const ApiFunc& api, int64_t group_id, int64_t time);
 	static void handle_oral_edict(const ApiFunc& api, int64_t group_id, int64_t user_id, const std::string& text);
 	static void handle_at_robot(const ApiFunc& api, int64_t group_id);
-	static void
-	handle_upload_sex_image(const ApiFunc& api, int64_t group_id, int64_t user_id, const std::string& message_id);
+	static bool is_commond_of_upload_sex_image(const std::string& raw_message, const json& message_array);
+	static void download_images(const ApiFunc& api, const json& messages, int& suc, int& total, json& message);
+	static void download_image(const ApiFunc& api, const json& image_data, int& suc, int& total, json& message);
+	static void handle_upload_sex_image(const ApiFunc& api, const json& message_array, int64_t group_id);
 	static void handle_upload_eat(
 		const ApiFunc& api, int64_t group_id, int64_t user_id, const std::string& word, const std::string& message_id);
 	static void handle_upload_drink(
