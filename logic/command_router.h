@@ -15,4 +15,6 @@ class CommandRouter {
 	static void add_notice_group_member(int64_t group_id, int64_t user_id);
 	static void del_notice_group_member(int64_t group_id, int64_t user_id);
 	static void get_notice_members_by_group(int64_t group_id, std::vector<int64_t>& user_ids);
+	static void load_ban_data();
+	static void save_ban_data();
 };

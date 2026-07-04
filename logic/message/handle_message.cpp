@@ -34,94 +34,60 @@ void HandleMessage::start(const json& event, const ApiFunc& api) {
 		}
 
 		const int64_t seed = time / 86400 + user_id; // 每天每人一个固定的 seed
-		int luckey_num = 0;							 // 初始化，避免未定义行为
-		json message_array = event.at("message");
-		filter_valid_messages(message_array);
-		const auto message_size = message_array.size();
-		if (is_commond_of_upload_sex_image(raw_message, message_array)) {
-			handle_upload_sex_image(api, message_array, group_id);
+		if (raw_message == "今日运势") {
+			handle_today_fortune(api, group_id, user_id, seed);
 			return;
 		}
-		if (message_size == 1) {
-			const auto& seg_obj = message_array[0];
-			const std::string type = seg_obj.at("type").get<std::string>();
-			if (type == "text") {
-				const std::string text = seg_obj.at("data").at("text").get<std::string>();
-				std::string word;
-				if (text == "今日运势") {
-					handle_today_fortune(api, group_id, user_id, luckey_num, seed);
-				}
-				else if (text == "今日老婆" || text == "今日老公" || text == "今日妈妈" || text == "今日主人") {
-					handle_today_relation(api, group_id, user_id, luckey_num, seed, text);
-				}
-				else if (text == "关系图") {
-					handle_relation_graph(api, group_id);
-				}
-				else if (text == "今日龙王榜") {
-					handle_message_rank(api, group_id);
-				}
-				else if (text == "订阅通知") {
-					handle_subscribe(api, group_id, user_id);
-				}
-				else if (text == "取消订阅") {
-					handle_unsubscribe(api, group_id, user_id);
-				}
-				else if (text == "来点色图") {
-					handle_get_sex_image(api, group_id, time);
-				}
-				else if (text[0] == '/') {
-					handle_oral_edict(api, group_id, user_id, text);
-				}
-			}
-			else if (type == "at") {
-				const int64_t qq = std::stoll(seg_obj.at("data").at("qq").get<std::string>());
-				if (qq == common::ROBOT_QQ) {
-					handle_at_robot(api, group_id);
-				}
-			}
+		if (raw_message == "今日老婆" || raw_message == "今日老公" || raw_message == "今日妈妈" ||
+			raw_message == "今日主人") {
+			handle_today_relation(api, group_id, user_id, seed, raw_message);
+			return;
 		}
-		else if (message_size == 2) {
-			const auto& seg_obj0 = message_array[0];
-			const std::string type0 = seg_obj0.at("type").get<std::string>();
-			const auto& seg_obj1 = message_array[1];
-			const std::string type1 = seg_obj1.at("type").get<std::string>();
-			if (type0 == "reply") {
-				const std::string message_id = seg_obj0.at("data").at("id").get<std::string>();
-				if (type1 == "text") {
-					const std::string text = seg_obj1.at("data").at("text").get<std::string>();
-					std::string word;
-					if (common::starts_with_and_trim(text, "/吃！", word)) {
-						handle_upload_eat(api, group_id, user_id, word, message_id);
-					}
-					else if (common::starts_with_and_trim(text, "/喝！", word)) {
-						handle_upload_drink(api, group_id, user_id, word, message_id);
-					}
-				}
-			}
-			else if (type0 == "text") {
-				const std::string text = seg_obj0.at("data").at("text").get<std::string>();
-				if (text == "/ban") {
-					handle_ban(api, group_id, user_id, type1, seg_obj1);
-				}
-				else if (text == "/allow") {
-					handle_allow(api, group_id, user_id, type1, seg_obj1);
-				}
-			}
+		if (raw_message == "关系图") {
+			handle_relation_graph(api, group_id);
+			return;
+		}
+		if (raw_message == "今日龙王榜") {
+			handle_message_rank(api, group_id);
+			return;
+		}
+		if (raw_message == "订阅通知") {
+			handle_subscribe(api, group_id, user_id);
+			return;
+		}
+		if (raw_message == "取消订阅") {
+			handle_unsubscribe(api, group_id, user_id);
+			return;
+		}
+		if (raw_message == "来点色图") {
+			handle_get_sex_image(api, group_id, time);
+			return;
+		}
+		std::string command;
+		if (common::starts_with_and_trim(raw_message, "传旨！", command)) {
+			handle_oral_edict(api, group_id, user_id, command);
+			return;
+		}
+
+		json message_array = event.at("message");
+		filter_valid_messages(message_array);
+		if (is_commond_of_upload_sex_image(raw_message, message_array)) {
+			handle_upload_sex_image(api, message_array, group_id, user_id);
+			return;
+		}
+		std::string word;
+		if (upload_eat_or_drink_image(api, message_array, group_id, word)) {
+			return;
+		}
+		if (raw_message.find("ban") != std::string::npos) {
+			handle_ban(api, message_array, group_id, user_id);
+			return;
+		}
+		if (raw_message.find("allow") != std::string::npos) {
+			handle_allow(api, message_array, group_id, user_id);
+			return;
 		}
 	}
-}
-void HandleMessage::filter_valid_messages(json& message_array) {
-	message_array.erase(std::remove_if(message_array.begin(),
-									   message_array.end(),
-									   [](json& message) {
-										   if (message["type"] != "text") {
-											   return false;
-										   }
-										   auto& text = message["data"]["text"].get_ref<std::string&>();
-										   common::trim(text);
-										   return text.empty();
-									   }),
-						message_array.end());
 }
 void HandleMessage::handle_eat_drink(const ApiFunc& api,
 									 int64_t group_id,
@@ -140,8 +106,7 @@ void HandleMessage::handle_eat_drink(const ApiFunc& api,
 	params["message"] = message;
 	api("send_group_msg", params);
 }
-void HandleMessage::handle_today_fortune(
-	const ApiFunc& api, int64_t group_id, int64_t user_id, int luckey_num, int64_t seed) {
+void HandleMessage::handle_today_fortune(const ApiFunc& api, int64_t group_id, int64_t user_id, int64_t seed) {
 	json params{};
 	params["group_id"] = group_id;
 	json message = json::array();
@@ -152,6 +117,7 @@ void HandleMessage::handle_today_fortune(
 		fortunes.push_back(fortune);
 	}
 	ifs.close();
+	int luckey_num = 0;
 	common::shuffle_vector(fortunes, luckey_num, seed);
 	common::add_at_message(message, user_id);
 	common::add_text_message(message,
@@ -162,13 +128,14 @@ void HandleMessage::handle_today_fortune(
 	api("send_group_msg", params);
 }
 void HandleMessage::handle_today_relation(
-	const ApiFunc& api, int64_t group_id, int64_t user_id, int luckey_num, int64_t seed, const std::string& text) {
+	const ApiFunc& api, int64_t group_id, int64_t user_id, int64_t seed, const std::string& text) {
 	std::vector<int64_t> temp;
 	{
 		std::lock_guard<std::mutex> lock(common::group_members_mutex);
 		temp = (common::group_active_members[group_id].empty() ? common::group_members
 															   : common::group_active_members)[group_id];
 	}
+	int luckey_num = 0;
 	common::shuffle_vector(temp, luckey_num, seed);
 	const int member_count = temp.size();
 	int64_t match_id = 0;
@@ -340,9 +307,11 @@ void HandleMessage::handle_get_sex_image(const ApiFunc& api, int64_t group_id, i
 	params["message"] = message;
 	api("send_group_msg", params);
 }
-void HandleMessage::handle_oral_edict(const ApiFunc& api, int64_t group_id, int64_t user_id, const std::string& text) {
+void HandleMessage::handle_oral_edict(const ApiFunc& api,
+									  int64_t group_id,
+									  int64_t user_id,
+									  const std::string& command) {
 	if (common::ADMIN_QQ == user_id) {
-		const std::string command = text.substr(1);
 		json params{};
 		params["group_id"] = group_id;
 		json message = json::array();
@@ -372,22 +341,21 @@ void HandleMessage::handle_oral_edict(const ApiFunc& api, int64_t group_id, int6
 		api("send_group_msg", params);
 	}
 	else {
-		json params{};
-		params["group_id"] = group_id;
-		json message = json::array();
-		common::add_at_message(message, user_id);
-		common::add_text_message(message, "\n权限不足");
-		params["message"] = message;
-		api("send_group_msg", params);
+		handle_no_permission(api, group_id, user_id);
 	}
 }
-void HandleMessage::handle_at_robot(const ApiFunc& api, int64_t group_id) {
-	json params{};
-	params["group_id"] = group_id;
-	json message = json::array();
-	common::add_text_message(message, "干什么！");
-	params["message"] = message;
-	api("send_group_msg", params);
+void HandleMessage::filter_valid_messages(json& message_array) {
+	message_array.erase(std::remove_if(message_array.begin(),
+									   message_array.end(),
+									   [](json& message) {
+										   if (message["type"] != "text") {
+											   return false;
+										   }
+										   auto& text = message["data"]["text"].get_ref<std::string&>();
+										   common::trim(text);
+										   return text.empty();
+									   }),
+						message_array.end());
 }
 bool HandleMessage::is_commond_of_upload_sex_image(const std::string& raw_message, const json& message_array) {
 	if (raw_message.find("上传色图") != std::string::npos) {
@@ -413,18 +381,160 @@ bool HandleMessage::is_commond_of_upload_sex_image(const std::string& raw_messag
 	}
 	return false;
 }
-void HandleMessage::download_images(const ApiFunc& api, const json& messages, int& suc, int& total, json& message) {
+void HandleMessage::handle_upload_sex_image(const ApiFunc& api,
+											const json& message_array,
+											int64_t group_id,
+											int64_t user_id) {
+	if (common::bans.count(std::to_string(user_id))) {
+		handle_no_permission(api, group_id, user_id);
+		return;
+	}
+	int suc = 0;
+	int total = 0;
+	json message = json::array();
+	for (const auto& msg : message_array) {
+		const auto& type = msg.at("type");
+		if (type == "image") {
+			download_sex_image(api, msg.at("data"), common::SEX_REVIEW_DIR, suc, total, message);
+		}
+		else if (type == "reply") {
+			json params{{"message_id", msg.at("data").at("id")}};
+			const auto reply_messages = api("get_msg", params).at("data").at("message");
+			download_sex_images(api, reply_messages, common::SEX_REVIEW_DIR, suc, total, message);
+		}
+	}
+	common::add_text_message(message, "上传完成！成功率：" + std::to_string(suc) + "/" + std::to_string(total));
+	api("send_group_msg", {{"group_id", group_id}, {"message", message}});
+}
+bool HandleMessage::upload_eat_or_drink_image(const ApiFunc& api,
+											  const json& message_array,
+											  int64_t group_id,
+											  std::string& word) {
+	for (const auto& msg : message_array) {
+		const auto& type = msg.at("type");
+		if (type == "text") {
+			const auto& text = msg.at("data").at("text").get<std::string>();
+			if (common::starts_with_and_trim(text, "吃！", word)) {
+				handle_upload_eat_or_drink_image(api, message_array, word, group_id, true);
+				return true;
+			}
+			if (common::starts_with_and_trim(text, "喝！", word)) {
+				handle_upload_eat_or_drink_image(api, message_array, word, group_id, false);
+				return true;
+			}
+		}
+	}
+	return false;
+}
+void HandleMessage::handle_upload_eat_or_drink_image(
+	const ApiFunc& api, const json& message_array, const std::string& word, int64_t group_id, bool is_eat) {
+	const std::string save_path = (is_eat ? common::EAT_REVIEW_DIR : common::DRINK_REVIEW_DIR) + word;
+	bool suc = false;
+	for (const auto& msg : message_array) {
+		const auto& type = msg.at("type");
+		if (type == "image") {
+			const auto image_data = msg.at("data");
+			const std::string url = image_data.at("url").get<std::string>();
+			const auto response = api("download_file", json{{"url", url}, {"name", save_path}});
+			const int64_t retcode = response["retcode"].get<int64_t>();
+			suc = !retcode;
+			break;
+		}
+		else if (type == "reply") {
+			const auto reply_messages =
+				api("get_msg", {{"message_id", msg.at("data").at("id")}}).at("data").at("message");
+			for (const auto& reply_msg : reply_messages) {
+				const auto& reply_type = reply_msg.at("type");
+				if (reply_type == "image") {
+					const auto image_data = reply_msg.at("data");
+					const std::string url = image_data.at("url").get<std::string>();
+					const auto response = api("download_file", json{{"url", url}, {"name", save_path}});
+					const int64_t retcode = response["retcode"].get<int64_t>();
+					suc = !retcode;
+					break;
+				}
+			}
+			break;
+		}
+	}
+	json params{};
+	params["group_id"] = group_id;
+	json message = json::array();
+	if (is_eat) {
+		if (suc) {
+			common::add_text_message(message, "Rusk最喜欢吃" + word + "了！真好吃！");
+		}
+		else {
+			common::add_text_message(message, "呸呸呸！" + word + "真难吃！");
+		}
+	}
+	else {
+		if (suc) {
+			common::add_text_message(message, "吨吨吨！" + word + "真好喝！");
+		}
+		else {
+			common::add_text_message(message, "yue~ " + word + "真难喝！");
+		}
+	}
+	params["message"] = message;
+	api("send_group_msg", params);
+}
+void HandleMessage::handle_ban(const ApiFunc& api, const json& message_array, int64_t group_id, int64_t user_id) {
+	if (common::ADMIN_QQ == user_id) {
+		json params{};
+		params["group_id"] = group_id;
+		json message = json::array();
+		for (const auto& msg : message_array) {
+			const auto& type = msg.at("type");
+			if (type == "at") {
+				const std::string& ban_user_id = msg.at("data").at("qq").get<std::string>();
+				common::bans.insert(ban_user_id);
+				common::add_at_message(message, std::stoll(ban_user_id));
+			}
+		}
+		common::add_text_message(message, "已封禁");
+		params["message"] = message;
+		api("send_group_msg", params);
+	}
+	else {
+		handle_no_permission(api, group_id, user_id);
+	}
+}
+void HandleMessage::handle_allow(const ApiFunc& api, const json& message_array, int64_t group_id, int64_t user_id) {
+	if (common::ADMIN_QQ == user_id) {
+		json params{};
+		params["group_id"] = group_id;
+		json message = json::array();
+		for (const auto& msg : message_array) {
+			const auto& type = msg.at("type");
+			if (type == "at") {
+				const std::string& ban_user_id = msg.at("data").at("qq").get<std::string>();
+				common::bans.erase(ban_user_id);
+				common::add_at_message(message, std::stoll(ban_user_id));
+			}
+		}
+		common::add_text_message(message, "已解封");
+		params["message"] = message;
+		api("send_group_msg", params);
+	}
+	else {
+		handle_no_permission(api, group_id, user_id);
+	}
+}
+void HandleMessage::download_sex_images(
+	const ApiFunc& api, const json& messages, const std::string& save_dir, int& suc, int& total, json& message) {
 	for (const auto& msg : messages) {
 		if (msg.at("type") == "image") {
-			download_image(api, msg.at("data"), suc, total, message);
+			download_sex_image(api, msg.at("data"), save_dir, suc, total, message);
 		}
 	}
 }
-void HandleMessage::download_image(const ApiFunc& api, const json& image_data, int& suc, int& total, json& message) {
+void HandleMessage::download_sex_image(
+	const ApiFunc& api, const json& image_data, const std::string& save_dir, int& suc, int& total, json& message) {
 	++total;
 	const std::string file_name = image_data.at("file").get<std::string>();
 	const std::string url = image_data.at("url").get<std::string>();
-	const std::string save_path = "../../../../../" + common::SEX_REVIEW_DIR + file_name;
+	const std::string save_path = save_dir + file_name;
 	const auto response = api("download_file", {{"url", url}, {"name", save_path}});
 	if (response.at("retcode").get<int64_t>() == 0) {
 		++suc;
@@ -433,173 +543,17 @@ void HandleMessage::download_image(const ApiFunc& api, const json& image_data, i
 		common::add_text_message(message, response.at("message").get<std::string>() + "\n");
 	}
 }
-void HandleMessage::handle_upload_sex_image(const ApiFunc& api, const json& message_array, int64_t group_id) {
-	int suc = 0;
-	int total = 0;
+void HandleMessage::handle_no_permission(const ApiFunc& api, int64_t group_id, int64_t user_id) {
+	json params{};
+	params["group_id"] = group_id;
 	json message = json::array();
-	for (const auto& msg : message_array) {
-		const auto& type = msg.at("type");
-		if (type == "image") {
-			download_image(api, msg.at("data"), suc, total, message);
-		}
-		else if (type == "reply") {
-			json params{{"message_id", msg.at("data").at("id")}};
-			const auto reply_messages = api("get_msg", params).at("data").at("message");
-			download_images(api, reply_messages, suc, total, message);
-		}
-	}
-	common::add_text_message(message, "上传完成！成功率：" + std::to_string(suc) + "/" + std::to_string(total));
-	api("send_group_msg", {{"group_id", group_id}, {"message", message}});
-}
-void HandleMessage::handle_upload_eat(
-	const ApiFunc& api, int64_t group_id, int64_t user_id, const std::string& word, const std::string& message_id) {
-	if (common::is_ban(user_id)) {
-		json params{};
-		params["group_id"] = group_id;
-		json message = json::array();
-		common::add_at_message(message, user_id);
-		common::add_text_message(message, "\n权限不足");
-		params["message"] = message;
-		api("send_group_msg", params);
-	}
-	else {
-		json params{};
-		params["message_id"] = message_id;
-		const auto messages_json = api("get_msg", params)["data"].at("message");
-		bool suc = false;
-		for (const auto& message_json : messages_json) {
-			if (message_json.at("type") == "image") {
-				const auto image_data = message_json.at("data");
-				const std::string url = image_data.at("url").get<std::string>();
-				const std::string save_path = "../../../../../" + common::EAT_REVIEW_DIR + word;
-				const auto response = api("download_file", json{{"url", url}, {"name", save_path}});
-				const int64_t retcode = response["retcode"].get<int64_t>();
-				if (retcode == 0) {
-					suc = true;
-					break;
-				}
-			}
-		}
-		params["group_id"] = group_id;
-		json message = json::array();
-		if (suc) {
-			common::add_text_message(message, "Rusk最喜欢吃" + word + "了！真好吃！");
-		}
-		else {
-			common::add_text_message(message, "呸呸呸！" + word + "真难吃！");
-		}
-		params["message"] = message;
-		api("send_group_msg", params);
-	}
-}
-void HandleMessage::handle_upload_drink(
-	const ApiFunc& api, int64_t group_id, int64_t user_id, const std::string& word, const std::string& message_id) {
-	if (common::is_ban(user_id)) {
-		json params{};
-		params["group_id"] = group_id;
-		json message = json::array();
-		common::add_at_message(message, user_id);
-		common::add_text_message(message, "\n权限不足");
-		params["message"] = message;
-		api("send_group_msg", params);
-	}
-	else {
-		json params{};
-		params["message_id"] = message_id;
-		const auto messages_json = api("get_msg", params)["data"].at("message");
-		bool suc = false;
-		for (const auto& message_json : messages_json) {
-			if (message_json.at("type") == "image") {
-				const auto image_data = message_json.at("data");
-				const std::string url = image_data.at("url").get<std::string>();
-				const std::string save_path = "../../../../../" + common::DRINK_REVIEW_DIR + word;
-				const auto response = api("download_file", json{{"url", url}, {"name", save_path}});
-				const int64_t retcode = response["retcode"].get<int64_t>();
-				if (retcode == 0) {
-					suc = true;
-					break;
-				}
-			}
-		}
-		params["group_id"] = group_id;
-		json message = json::array();
-		if (suc) {
-			common::add_text_message(message, "吨吨吨！" + word + "真好喝！");
-		}
-		else {
-			common::add_text_message(message, "yue~ " + word + "真难喝！");
-		}
-		params["message"] = message;
-		api("send_group_msg", params);
-	}
-}
-void HandleMessage::handle_ban(
-	const ApiFunc& api, int64_t group_id, int64_t user_id, const std::string& type1, const json& seg_obj1) {
-	if (common::ADMIN_QQ == user_id) {
-		if (type1 == "at") {
-			const int64_t ban_user_id = std::stoll(seg_obj1.at("data").at("qq").get<std::string>());
-			std::ofstream ofs(common::BAN_FILE, std::ios::app);
-			ofs << ban_user_id << "\n";
-			ofs.close();
-			json params{};
-			params["group_id"] = group_id;
-			json message = json::array();
-			common::add_at_message(message, ban_user_id);
-			common::add_text_message(message, "已封禁");
-			params["message"] = message;
-			api("send_group_msg", params);
-		}
-	}
-	else {
-		json params{};
-		params["group_id"] = group_id;
-		json message = json::array();
-		common::add_at_message(message, user_id);
-		common::add_text_message(message, "\n权限不足");
-		params["message"] = message;
-		api("send_group_msg", params);
-	}
-}
-void HandleMessage::handle_allow(
-	const ApiFunc& api, int64_t group_id, int64_t user_id, const std::string& type1, const json& seg_obj1) {
-	if (common::ADMIN_QQ == user_id) {
-		if (type1 == "at") {
-			const int64_t allow_user_id = std::stoll(seg_obj1.at("data").at("qq").get<std::string>());
-			std::vector<int64_t> bans;
-			std::ifstream ifs(common::BAN_FILE);
-			int64_t ban;
-			while (ifs >> ban) {
-				bans.push_back(ban);
-			}
-			ifs.close();
-			bans.erase(std::remove(bans.begin(), bans.end(), allow_user_id), bans.end());
-			std::ofstream ofs(common::BAN_FILE);
-			for (const int64_t& ban : bans) {
-				ofs << ban << "\n";
-			}
-			ofs.close();
-			json params{};
-			params["group_id"] = group_id;
-			json message = json::array();
-			common::add_at_message(message, allow_user_id);
-			common::add_text_message(message, "已解封");
-			params["message"] = message;
-			api("send_group_msg", params);
-		}
-	}
-	else {
-		json params{};
-		params["group_id"] = group_id;
-		json message = json::array();
-		common::add_at_message(message, user_id);
-		common::add_text_message(message, "\n权限不足");
-		params["message"] = message;
-		api("send_group_msg", params);
-	}
+	common::add_at_message(message, user_id);
+	common::add_text_message(message, "\n权限不足");
+	params["message"] = message;
+	api("send_group_msg", params);
 }
 /*
 1.急急急
-封装ban改为所有指令都不允许，allow改为所有指令都允许
 
 2.必要
 加日志
@@ -611,6 +565,7 @@ void HandleMessage::handle_allow(
 功能开关
 测试群写入配置文件
 运势文件只读一次
+退出自动保存数据
 
 3.有用
 崩溃自动重启

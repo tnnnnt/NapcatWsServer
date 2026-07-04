@@ -199,3 +199,20 @@ void CommandRouter::get_notice_members_by_group(int64_t group_id, std::vector<in
 		}
 	}
 }
+void CommandRouter::load_ban_data() {
+	std::ifstream ifs_ban(common::BAN_FILE);
+	if (!ifs_ban.is_open()) {
+		std::cerr << "无法打开BAN文件: " << common::BAN_FILE << std::endl;
+		return;
+	}
+	std::string ban;
+	while (std::getline(ifs_ban, ban)) {
+		common::bans.insert(ban);
+	}
+}
+void CommandRouter::save_ban_data() { 
+	std::ofstream ofs_ban(common::BAN_FILE);
+	for (const auto& ban : common::bans) {
+		ofs_ban << ban << "\n";
+	}
+}
