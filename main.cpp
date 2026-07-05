@@ -1,9 +1,22 @@
-﻿#include <iostream>
+﻿#include <fstream>
+#include <iostream>
+#include <string>
 #include <thread>
 #include "core/bot_client.h"
 #include "network_types.hpp"
-constexpr int PORT = 8080;
+const std::string WORK_DIR = "/home/bot/qq_robot/"; // 工作目录
+const std::string PORT_FILE = WORK_DIR + "port.txt";
 int main() {
+	std::string port_str;
+	std::ifstream ifs_port(PORT_FILE);
+	if (!ifs_port.is_open()) {
+		std::cerr << "无法打开配置文件: " << PORT_FILE << std::endl;
+		return -1;
+	}
+	std::getline(ifs_port, port_str);
+	ifs_port.close();
+	const short unsigned int PORT = std::stoi(port_str);
+
 	net::io_context ioc{1};
 	tcp::acceptor acceptor{ioc, {tcp::v4(), PORT}};
 	std::cout << "Listening on port " << PORT << "\n";
