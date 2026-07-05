@@ -35,10 +35,10 @@ void CommandRouter::daily(const ApiFunc& api) {
 		common::group_member_relations.clear();
 	}
 }
-void CommandRouter::load_config() {
-	std::ifstream ifs_config(common::CONFIG_FILE);
+void CommandRouter::load_config_static() {
+	std::ifstream ifs_config(common::CONFIG_STATIC_FILE);
 	if (!ifs_config.is_open()) {
-		std::cerr << "无法打开配置文件: " << common::CONFIG_FILE << std::endl;
+		std::cerr << "无法打开配置文件: " << common::CONFIG_STATIC_FILE << std::endl;
 		return;
 	}
 	json config_json{};
@@ -48,10 +48,18 @@ void CommandRouter::load_config() {
 	common::YUN_ROBOT_QQ = config_json.at("yun_robot_qq").get<int64_t>();
 	common::POOL_SIZE = config_json.at("pool_size").get<size_t>();
 	common::RANK_SIZE = config_json.at("rank_size").get<size_t>();
+}
+void CommandRouter::load_config() {
+	std::ifstream ifs_config(common::CONFIG_FILE);
+	if (!ifs_config.is_open()) {
+		std::cerr << "无法打开配置文件: " << common::CONFIG_FILE << std::endl;
+		return;
+	}
+	json config_json{};
+	ifs_config >> config_json;
 	common::BASE_DELAY = config_json.at("base_delay").get<size_t>();
 	common::RANDOM_DELAY = config_json.at("random_delay").get<size_t>();
 	common::TIME_SAVE_INTERVAL = config_json.at("time_save_interval").get<size_t>();
-	common::TIME_ZONE_OFFSET = config_json.at("time_zone_offset").get<size_t>();
 	common::MIN_ACTIVITY_LEVEL = config_json.at("min_activity_level").get<size_t>();
 	ifs_config.close();
 

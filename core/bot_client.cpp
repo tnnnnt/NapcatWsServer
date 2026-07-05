@@ -28,6 +28,7 @@ BotClient::~BotClient() {
 }
 
 void BotClient::start() {
+	CommandRouter::load_config_static();
 	CommandRouter::load_config();
 	CommandRouter::load_ban_data();
 	CommandRouter::load_today_group_member_message_number_data();

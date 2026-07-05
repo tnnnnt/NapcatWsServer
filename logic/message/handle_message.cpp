@@ -24,7 +24,7 @@ void HandleMessage::start(const json& event, const ApiFunc& api) {
 			std::lock_guard<std::mutex> lock(common::today_group_member_message_number_mutex);
 			++common::today_group_member_message_number[group_id][user_id];
 		}
-		const auto time = event.at("time").get<int64_t>() + common::TIME_ZONE_OFFSET; // 转为北京时间
+		const auto time = event.at("time").get<int64_t>() + 28800; // 转为北京时间
 		const std::string raw_message = event.at("raw_message").get<std::string>();
 
 		if (raw_message.find("吃什么") != std::string::npos || raw_message.find("吃啥") != std::string::npos ||
@@ -554,18 +554,20 @@ void HandleMessage::handle_no_permission(const ApiFunc& api, int64_t group_id, i
 }
 /*
 1.急急急
+区分启动时和运行时读取的配置文件
+测试群写入启动时配置文件
+运势文件只读一次
+退出自动保存数据
+加日志
+将今日老婆等命令改为抽/换老婆，每日限制3次，增加查关系和取消功能，增加一键抽功能
 
 2.必要
-加日志
 性能优化
 重构
 帮助菜单
 指令调用统计
 根据发送信息大小调整发送间隔
 功能开关
-测试群写入配置文件
-运势文件只读一次
-退出自动保存数据
 
 3.有用
 崩溃自动重启
@@ -578,14 +580,9 @@ void HandleMessage::handle_no_permission(const ApiFunc& api, int64_t group_id, i
 设置群提醒
 设置群成员专属提醒
 日历
-色图分级（来点色图按各群配置xp，也可指定色图库）
 上传文件自动压缩
-部分命令去掉/
-快速添加运势词
-快速添加色图上传关键词
 
 4.有趣的功能
-将今日老婆等命令改为抽/换老婆，每日限制3次，增加查关系和取消功能，增加一键抽功能
 老婆跑了等
 个人关系图提取
 可不可以
