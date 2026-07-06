@@ -46,6 +46,7 @@ void CommandRouter::load_config_static() {
 	common::ADMIN_QQ = config_json.at("admin_qq").get<int64_t>();
 	common::ROBOT_QQ = config_json.at("robot_qq").get<int64_t>();
 	common::YUN_ROBOT_QQ = config_json.at("yun_robot_qq").get<int64_t>();
+	common::TEST_GROUP = config_json.at("test_group").get<int64_t>();
 	common::POOL_SIZE = config_json.at("pool_size").get<size_t>();
 	common::RANK_SIZE = config_json.at("rank_size").get<size_t>();
 }
@@ -218,7 +219,7 @@ void CommandRouter::load_ban_data() {
 		common::bans.insert(ban);
 	}
 }
-void CommandRouter::save_ban_data() { 
+void CommandRouter::save_ban_data() {
 	std::ofstream ofs_ban(common::BAN_FILE);
 	for (const auto& ban : common::bans) {
 		ofs_ban << ban << "\n";

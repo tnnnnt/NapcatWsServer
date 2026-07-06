@@ -17,11 +17,12 @@ namespace common {
 
 	inline const std::string CONFIG_STATIC_FILE =
 		WORK_DIR + "config_static.json"; // 全局配置文件，仅在启动时读取一次，之后不会再读取
-	inline int64_t ADMIN_QQ;		  // 管理员 QQ 号
-	inline int64_t ROBOT_QQ;		  // 机器人 QQ 号
-	inline int64_t YUN_ROBOT_QQ;	  // 小云机器人 QQ 号
-	inline size_t POOL_SIZE;		  // 线程池大小
-	inline size_t RANK_SIZE;		  // 排行榜大小
+	inline int64_t ADMIN_QQ;			 // 管理员 QQ 号
+	inline int64_t ROBOT_QQ;			 // 机器人 QQ 号
+	inline int64_t YUN_ROBOT_QQ;		 // 小云机器人 QQ 号
+	inline int64_t TEST_GROUP;			 // 测试群
+	inline size_t POOL_SIZE;			 // 线程池大小
+	inline size_t RANK_SIZE;			 // 排行榜大小
 
 	inline const std::string CONFIG_FILE = WORK_DIR + "config.json";							   // 配置文件
 	inline const std::string SAVE_DIR = WORK_DIR + "save/";										   // 数据保存目录
@@ -42,7 +43,6 @@ namespace common {
 	inline const std::string NOTICE_GROUP_MEMBER_FILE = common::SAVE_DIR + "notice_group_member.json"; // 群公告成员文件
 	inline const std::string TODAY_GROUP_MEMBER_MESSAGE_NUMBER_FILE =
 		common::SAVE_DIR + "today_group_member_message_number.json"; // 今日群成员发言数文件
-	inline const int64_t TEST_GROUP = 1092859942;					 // 测试群
 
 	inline size_t BASE_DELAY;		  // 基础延迟（秒）
 	inline size_t RANDOM_DELAY;		  // 随机延迟（秒）
