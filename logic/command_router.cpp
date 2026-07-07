@@ -22,6 +22,7 @@ void CommandRouter::handle(const json& event, const ApiFunc& api) {
 }
 void CommandRouter::daily(const ApiFunc& api) {
 	load_config_daily();
+	load_fortune();
 	updata_group_members_data(api);
 	for (const int64_t& group_id : common::group_ids) {
 		send_today_group_member_message_number_data(group_id, api);
@@ -71,6 +72,18 @@ void CommandRouter::load_config_daily() {
 	json config_json{};
 	ifs_config >> config_json;
 	common::MIN_ACTIVITY_LEVEL = config_json.at("min_activity_level").get<size_t>();
+}
+void CommandRouter::load_fortune() {
+	std::ifstream ifs_fortune(common::FORTUNE_FILE);
+	if (!ifs_fortune.is_open()) {
+		std::cerr << "无法打开运势文件: " << common::FORTUNE_FILE << std::endl;
+		return;
+	}
+	std::string fortune;
+	common::fortunes.clear();
+	while (std::getline(ifs_fortune, fortune)) {
+		common::fortunes.push_back(fortune);
+	}
 }
 void CommandRouter::load_sex_upload_commond_keyword() {
 	std::ifstream ifs_sex_upload_commond_keyword(common::SEX_UPLOAD_COMMOND_KEYWORD_FILE);

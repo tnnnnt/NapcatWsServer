@@ -31,6 +31,7 @@ void BotClient::start() {
 	CommandRouter::load_config_static();
 	CommandRouter::load_config_periodic();
 	CommandRouter::load_config_daily();
+	CommandRouter::load_fortune();
 	CommandRouter::load_sex_upload_commond_keyword();
 	CommandRouter::load_ban_data();
 	CommandRouter::load_today_group_member_message_number_data();

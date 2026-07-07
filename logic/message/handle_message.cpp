@@ -110,20 +110,13 @@ void HandleMessage::handle_today_fortune(const ApiFunc& api, int64_t group_id, i
 	json params{};
 	params["group_id"] = group_id;
 	json message = json::array();
-	std::vector<std::string> fortunes; // 运势
-	std::string fortune;
-	std::ifstream ifs(common::FORTUNE_FILE);
-	while (std::getline(ifs, fortune)) {
-		fortunes.push_back(fortune);
-	}
-	ifs.close();
 	int luckey_num = 0;
-	common::shuffle_vector(fortunes, luckey_num, seed);
+	common::shuffle_vector(common::fortunes, luckey_num, seed);
 	common::add_at_message(message, user_id);
 	common::add_text_message(message,
-							 "\n今日运势（仅供娱乐）\n宜：" + fortunes[0] + " " + fortunes[1] + " " + fortunes[2] +
-								 "\n忌：" + fortunes[3] + " " + fortunes[4] + " " + fortunes[5] + "\n幸运数字：" +
-								 std::to_string(luckey_num));
+							 "\n今日运势（仅供娱乐）\n宜：" + common::fortunes[0] + " " + common::fortunes[1] + " " +
+								 common::fortunes[2] + "\n忌：" + common::fortunes[3] + " " + common::fortunes[4] +
+								 " " + common::fortunes[5] + "\n幸运数字：" + std::to_string(luckey_num));
 	params["message"] = message;
 	api("send_group_msg", params);
 }
@@ -257,8 +250,8 @@ void HandleMessage::handle_relation_graph(const ApiFunc& api, int64_t group_id) 
 			std::ofstream ofs_relations(common::RELATION_DIR + "relations.json");
 			ofs_relations << relations_json.dump();
 		}
-		const std::string cmd = "python3 " + common::SCRIPT_DIR + "relations.py " + common::RELATION_DIR +
-								"qq_name.json " + common::RELATION_DIR + "relations.json " + file_name;
+		const std::string cmd = "python3 " + common::RELATION_PY + " " + common::RELATION_DIR + "qq_name.json " +
+								common::RELATION_DIR + "relations.json " + file_name;
 		system(cmd.c_str());
 	}
 	json params{};
@@ -554,9 +547,6 @@ void HandleMessage::handle_no_permission(const ApiFunc& api, int64_t group_id, i
 }
 /*
 1.急急急
-区分启动时和运行时读取的配置文件
-测试群写入启动时配置文件
-运势文件只读一次
 退出自动保存数据
 加日志
 将今日老婆等命令改为抽/换老婆，每日限制3次，增加查关系和取消功能，增加一键抽功能
