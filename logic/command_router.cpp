@@ -21,7 +21,7 @@ void CommandRouter::handle(const json& event, const ApiFunc& api) {
 	}
 }
 void CommandRouter::daily(const ApiFunc& api) {
-	load_config();
+	load_config_daily();
 	updata_group_members_data(api);
 	for (const int64_t& group_id : common::group_ids) {
 		send_today_group_member_message_number_data(group_id, api);
@@ -50,10 +50,10 @@ void CommandRouter::load_config_static() {
 	common::POOL_SIZE = config_json.at("pool_size").get<size_t>();
 	common::RANK_SIZE = config_json.at("rank_size").get<size_t>();
 }
-void CommandRouter::load_config() {
-	std::ifstream ifs_config(common::CONFIG_FILE);
+void CommandRouter::load_config_periodic() {
+	std::ifstream ifs_config(common::CONFIG_PERIODIC_FILE);
 	if (!ifs_config.is_open()) {
-		std::cerr << "无法打开配置文件: " << common::CONFIG_FILE << std::endl;
+		std::cerr << "无法打开配置文件: " << common::CONFIG_PERIODIC_FILE << std::endl;
 		return;
 	}
 	json config_json{};
@@ -61,9 +61,18 @@ void CommandRouter::load_config() {
 	common::BASE_DELAY = config_json.at("base_delay").get<size_t>();
 	common::RANDOM_DELAY = config_json.at("random_delay").get<size_t>();
 	common::TIME_SAVE_INTERVAL = config_json.at("time_save_interval").get<size_t>();
+}
+void CommandRouter::load_config_daily() {
+	std::ifstream ifs_config(common::CONFIG_DAILY_FILE);
+	if (!ifs_config.is_open()) {
+		std::cerr << "无法打开配置文件: " << common::CONFIG_DAILY_FILE << std::endl;
+		return;
+	}
+	json config_json{};
+	ifs_config >> config_json;
 	common::MIN_ACTIVITY_LEVEL = config_json.at("min_activity_level").get<size_t>();
-	ifs_config.close();
-
+}
+void CommandRouter::load_sex_upload_commond_keyword() {
 	std::ifstream ifs_sex_upload_commond_keyword(common::SEX_UPLOAD_COMMOND_KEYWORD_FILE);
 	if (!ifs_sex_upload_commond_keyword.is_open()) {
 		std::cerr << "无法打开上传色图命令关键字文件: " << common::SEX_UPLOAD_COMMOND_KEYWORD_FILE << std::endl;
@@ -73,7 +82,6 @@ void CommandRouter::load_config() {
 	while (std::getline(ifs_sex_upload_commond_keyword, sex_upload_commond_keyword)) {
 		common::sex_upload_commond_keywords.push_back(sex_upload_commond_keyword);
 	}
-	ifs_sex_upload_commond_keyword.close();
 }
 void CommandRouter::updata_group_members_data(const ApiFunc& api) {
 	std::lock_guard<std::mutex> lock(common::group_members_mutex);

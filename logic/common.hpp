@@ -24,7 +24,16 @@ namespace common {
 	inline size_t POOL_SIZE;			 // 线程池大小
 	inline size_t RANK_SIZE;			 // 排行榜大小
 
-	inline const std::string CONFIG_FILE = WORK_DIR + "config.json";							   // 配置文件
+	inline const std::string CONFIG_PERIODIC_FILE =
+		WORK_DIR + "config_periodic.json"; // 周期配置文件，在启动时读取一次，之后按设置时间间隔读取
+	inline size_t BASE_DELAY;			   // 基础延迟（秒）
+	inline size_t RANDOM_DELAY;			   // 随机延迟（秒）
+	inline size_t TIME_SAVE_INTERVAL;	   // 数据保存时间间隔（秒）
+
+	inline const std::string CONFIG_DAILY_FILE =
+		WORK_DIR + "config_daily.json"; // 每日配置文件，在启动时读取一次，之后每天0点读取一次
+	inline size_t MIN_ACTIVITY_LEVEL;	// 最小活跃度要求（群等级）
+
 	inline const std::string SAVE_DIR = WORK_DIR + "save/";										   // 数据保存目录
 	inline const std::string EAT_DIR = common::WORK_DIR + "eat/";								   // 吃什么
 	inline const std::string PATH = "../../../../../";											   // 相对路径
@@ -43,11 +52,6 @@ namespace common {
 	inline const std::string NOTICE_GROUP_MEMBER_FILE = common::SAVE_DIR + "notice_group_member.json"; // 群公告成员文件
 	inline const std::string TODAY_GROUP_MEMBER_MESSAGE_NUMBER_FILE =
 		common::SAVE_DIR + "today_group_member_message_number.json"; // 今日群成员发言数文件
-
-	inline size_t BASE_DELAY;		  // 基础延迟（秒）
-	inline size_t RANDOM_DELAY;		  // 随机延迟（秒）
-	inline size_t TIME_SAVE_INTERVAL; // 数据保存时间间隔（秒）
-	inline size_t MIN_ACTIVITY_LEVEL; // 最小活跃度要求（群等级）
 
 	inline std::vector<std::string> sex_upload_commond_keywords; // 上传色图命令关键字列表
 	inline std::unordered_set<std::string> bans;				 // 封禁用户列表

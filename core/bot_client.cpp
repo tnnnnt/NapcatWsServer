@@ -29,7 +29,9 @@ BotClient::~BotClient() {
 
 void BotClient::start() {
 	CommandRouter::load_config_static();
-	CommandRouter::load_config();
+	CommandRouter::load_config_periodic();
+	CommandRouter::load_config_daily();
+	CommandRouter::load_sex_upload_commond_keyword();
 	CommandRouter::load_ban_data();
 	CommandRouter::load_today_group_member_message_number_data();
 	reader_ = std::thread([this]() { read_loop(); });
@@ -166,6 +168,8 @@ void BotClient::schedule_midnight_task_loop() {
 void BotClient::schedule_periodic_task_loop() {
 	while (true) {
 		std::this_thread::sleep_for(std::chrono::seconds(common::TIME_SAVE_INTERVAL));
+		CommandRouter::load_config_periodic();
+		CommandRouter::load_sex_upload_commond_keyword();
 		CommandRouter::save_today_group_member_message_number_data();
 		CommandRouter::save_ban_data();
 	}

@@ -5,7 +5,9 @@ class CommandRouter {
 	static void handle(const json& event, const ApiFunc& api);
 	static void daily(const ApiFunc& api);
 	static void load_config_static();
-	static void load_config();
+	static void load_config_periodic();
+	static void load_config_daily();
+	static void load_sex_upload_commond_keyword();
 	static void updata_group_members_data(const ApiFunc& api);
 	static void save_today_group_member_message_number_data();
 	static void load_today_group_member_message_number_data();
