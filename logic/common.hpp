@@ -49,6 +49,14 @@ namespace common {
 	inline const std::string FORTUNE_FILE = SAVE_DIR + "fortunes.txt"; // 运势文件
 	inline std::vector<std::string> fortunes;						   // 运势
 
+	// 上传色图
+	inline const std::string SEX_UPLOAD_COMMOND_KEYWORD_FILE = SAVE_DIR + "sex_upload_commond_keyword.txt"; // 关键字
+	inline std::vector<std::string> sex_upload_commond_keywords; // 上传色图命令关键字列表
+
+	// ban
+	inline const std::string BAN_FILE = SAVE_DIR + "ban.txt"; // 封禁用户文件
+	inline std::unordered_set<std::string> bans;			  // 封禁用户列表
+
 	// 关系
 	inline const std::string RELATION_PY = SCRIPT_DIR + "relations.py"; // 群成员关系文件
 	inline const std::string AVATAR_DIR = WORK_DIR + "avatar/";			// 头像
@@ -62,14 +70,6 @@ namespace common {
 	inline std::mutex group_member_relations_mutex; // 保护 group_member_relations 的互斥锁
 	inline std::unordered_map<int64_t, std::unordered_map<int64_t, Relation>>
 		group_member_relations; // 群成员关系，外层 key 是 group_id，内层 key 是 user_id
-
-	// 上传色图
-	inline const std::string SEX_UPLOAD_COMMOND_KEYWORD_FILE = SAVE_DIR + "sex_upload_commond_keyword.txt"; // 关键字
-	inline std::vector<std::string> sex_upload_commond_keywords; // 上传色图命令关键字列表
-
-	// ban
-	inline const std::string BAN_FILE = SAVE_DIR + "ban.txt"; // 封禁用户文件
-	inline std::unordered_set<std::string> bans;			  // 封禁用户列表
 
 	// 通知
 	inline const std::string NOTICE_GROUP_MEMBER_FILE = SAVE_DIR + "notice_group_member.json"; // 群公告成员文件

@@ -488,6 +488,7 @@ void HandleMessage::handle_ban(const ApiFunc& api, const json& message_array, in
 		common::add_text_message(message, "已封禁");
 		params["message"] = message;
 		api("send_group_msg", params);
+		CommandRouter::save_ban_data();
 	}
 	else {
 		handle_no_permission(api, group_id, user_id);
@@ -509,6 +510,7 @@ void HandleMessage::handle_allow(const ApiFunc& api, const json& message_array, 
 		common::add_text_message(message, "已解封");
 		params["message"] = message;
 		api("send_group_msg", params);
+		CommandRouter::save_ban_data();
 	}
 	else {
 		handle_no_permission(api, group_id, user_id);
@@ -547,6 +549,7 @@ void HandleMessage::handle_no_permission(const ApiFunc& api, int64_t group_id, i
 }
 /*
 1.急急急
+注意读写文件的线程安全问题
 退出自动保存数据
 加日志
 将今日老婆等命令改为抽/换老婆，每日限制3次，增加查关系和取消功能，增加一键抽功能

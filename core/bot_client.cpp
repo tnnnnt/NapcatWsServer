@@ -29,11 +29,14 @@ BotClient::~BotClient() {
 
 void BotClient::start() {
 	CommandRouter::load_config_static();
+	CommandRouter::load_ban_data();
+
 	CommandRouter::load_config_periodic();
+	CommandRouter::load_sex_upload_commond_keyword();
+
 	CommandRouter::load_config_daily();
 	CommandRouter::load_fortune();
-	CommandRouter::load_sex_upload_commond_keyword();
-	CommandRouter::load_ban_data();
+
 	CommandRouter::load_today_group_member_message_number_data();
 	reader_ = std::thread([this]() { read_loop(); });
 	for (size_t i = 0; i < common::POOL_SIZE; ++i) {
@@ -172,6 +175,5 @@ void BotClient::schedule_periodic_task_loop() {
 		CommandRouter::load_config_periodic();
 		CommandRouter::load_sex_upload_commond_keyword();
 		CommandRouter::save_today_group_member_message_number_data();
-		CommandRouter::save_ban_data();
 	}
 }
