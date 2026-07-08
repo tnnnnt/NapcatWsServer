@@ -79,7 +79,7 @@ void HandleMessage::start(const json& event, const ApiFunc& api) {
 		if (upload_eat_or_drink_image(api, message_array, group_id, word)) {
 			return;
 		}
-		if (raw_message.find("ban") != std::string::npos) {
+		if (raw_message.find("banbanban") != std::string::npos) {
 			handle_ban(api, message_array, group_id, user_id);
 			return;
 		}
@@ -549,6 +549,7 @@ void HandleMessage::handle_no_permission(const ApiFunc& api, int64_t group_id, i
 }
 /*
 1.急急急
+按读写类型分类文件（是否可以在群聊中直接修改等）
 注意读写文件的线程安全问题
 退出自动保存数据
 加日志
