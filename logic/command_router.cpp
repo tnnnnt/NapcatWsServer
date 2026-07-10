@@ -185,49 +185,13 @@ void CommandRouter::send_today_group_member_message_number_data(int64_t group_id
 	params["message"] = message;
 	api("send_group_msg", params);
 }
-void CommandRouter::save_notice_group_member_data(json& j) {
+void CommandRouter::save_notice_group_member_data() {
 	std::ofstream ofs(common::NOTICE_GROUP_MEMBER_FILE);
-	ofs << j.dump();
+	ofs << common::notice_group_member_json.dump();
 }
-void CommandRouter::load_notice_group_member_data(json& j) {
+void CommandRouter::load_notice_group_member_data() {
 	std::ifstream ifs(common::NOTICE_GROUP_MEMBER_FILE);
-	ifs >> j;
-}
-void CommandRouter::add_notice_group_member(int64_t group_id, int64_t user_id) {
-	json j{};
-	load_notice_group_member_data(j);
-	const std::string group_id_str = std::to_string(group_id);
-	const std::string user_id_str = std::to_string(user_id);
-	if (!j.contains(group_id_str)) {
-		j[group_id_str] = json::array();
-	}
-	auto& members = j[group_id_str];
-	if (std::find(members.begin(), members.end(), user_id_str) == members.end()) {
-		members.push_back(user_id_str);
-		save_notice_group_member_data(j);
-	}
-}
-void CommandRouter::del_notice_group_member(int64_t group_id, int64_t user_id) {
-	json j{};
-	load_notice_group_member_data(j);
-	const std::string group_id_str = std::to_string(group_id);
-	const std::string user_id_str = std::to_string(user_id);
-	if (j.contains(group_id_str)) {
-		auto& members = j[group_id_str];
-		members.erase(std::remove(members.begin(), members.end(), user_id_str), members.end());
-		save_notice_group_member_data(j);
-	}
-}
-void CommandRouter::get_notice_members_by_group(int64_t group_id, std::vector<int64_t>& user_ids) {
-	json j{};
-	load_notice_group_member_data(j);
-	const std::string group_id_str = std::to_string(group_id);
-	if (j.contains(group_id_str)) {
-		const auto& members = j[group_id_str];
-		for (const auto& user_id_str : members) {
-			user_ids.push_back(std::stoll(user_id_str.get<std::string>()));
-		}
-	}
+	ifs >> common::notice_group_member_json;
 }
 void CommandRouter::load_ban_data() {
 	std::ifstream ifs_ban(common::BAN_FILE);

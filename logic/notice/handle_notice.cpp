@@ -21,9 +21,17 @@ void HandleNotice::start(const json& event, const ApiFunc& api) {
 		common::add_text_message(message, "【" + nick + "】(" + std::to_string(user_id) + ") 遗憾离场 v_v");
 		params["message"] = message;
 		const int message_id = api("send_group_msg", params)["data"].at("message_id").get<int>();
-		CommandRouter::del_notice_group_member(group_id, user_id);
+		const std::string group_id_str = std::to_string(group_id);
+		const std::string user_id_str = std::to_string(user_id);
 		std::vector<int64_t> user_ids;
-		CommandRouter::get_notice_members_by_group(group_id, user_ids);
+		if (common::notice_group_member_json.contains(group_id_str)) {
+			auto& members = common::notice_group_member_json[group_id_str];
+			members.erase(std::remove(members.begin(), members.end(), user_id_str), members.end());
+			CommandRouter::save_notice_group_member_data();
+			for (const auto& user_id_str : members) {
+				user_ids.push_back(std::stoll(user_id_str.get<std::string>()));
+			}
+		}
 		const int user_count = user_ids.size();
 		for (int i = 0; i < user_count; ++i) {
 			if (i % 20 == 0) {

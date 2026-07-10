@@ -73,6 +73,7 @@ namespace common {
 
 	// 通知
 	inline const std::string NOTICE_GROUP_MEMBER_FILE = SAVE_DIR + "notice_group_member.json"; // 群公告成员文件
+	inline json notice_group_member_json; // 群公告成员列表，外层 key 是 group_id，内层是 user_id 列表
 
 	// 今日群成员发言数文件
 	inline const std::string TODAY_GROUP_MEMBER_MESSAGE_NUMBER_FILE =

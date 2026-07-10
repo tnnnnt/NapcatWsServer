@@ -265,7 +265,16 @@ void HandleMessage::handle_message_rank(const ApiFunc& api, int64_t group_id) {
 	CommandRouter::send_today_group_member_message_number_data(group_id, api);
 }
 void HandleMessage::handle_subscribe(const ApiFunc& api, int64_t group_id, int64_t user_id) {
-	CommandRouter::add_notice_group_member(group_id, user_id);
+	const std::string group_id_str = std::to_string(group_id);
+	const std::string user_id_str = std::to_string(user_id);
+	if (!common::notice_group_member_json.contains(group_id_str)) {
+		common::notice_group_member_json[group_id_str] = json::array();
+	}
+	auto& members = common::notice_group_member_json[group_id_str];
+	if (std::find(members.begin(), members.end(), user_id_str) == members.end()) {
+		members.push_back(user_id_str);
+		CommandRouter::save_notice_group_member_data();
+	}
 	json params{};
 	params["group_id"] = group_id;
 	json message = json::array();
@@ -275,7 +284,13 @@ void HandleMessage::handle_subscribe(const ApiFunc& api, int64_t group_id, int64
 	api("send_group_msg", params);
 }
 void HandleMessage::handle_unsubscribe(const ApiFunc& api, int64_t group_id, int64_t user_id) {
-	CommandRouter::del_notice_group_member(group_id, user_id);
+	const std::string group_id_str = std::to_string(group_id);
+	const std::string user_id_str = std::to_string(user_id);
+	if (common::notice_group_member_json.contains(group_id_str)) {
+		auto& members = common::notice_group_member_json[group_id_str];
+		members.erase(std::remove(members.begin(), members.end(), user_id_str), members.end());
+		CommandRouter::save_notice_group_member_data();
+	}
 	json params{};
 	params["group_id"] = group_id;
 	json message = json::array();
@@ -550,8 +565,23 @@ void HandleMessage::handle_no_permission(const ApiFunc& api, int64_t group_id, i
 /*
 1.急急急
 按读写类型分类文件（是否可以在群聊中直接修改等）
+	只读
+		仅在启动时读
+			config_static.json
+		启动时读，然后每天0点读一次
+			config_daily.json
+			fortunes.txt
+		启动时读，然后周期性读
+			config_periodic.json
+			sex_upload_commond_keywords.txt
+	读写
+		启动时读到变量中，运行时读写变量，修改变量后立即写入文件
+			ban.txt
+			notice_group_member.json
+		启动时读到变量中，运行时读写变量，每天0点清空变量，周期性写入文件
+			today_group_member_message_number.json
 注意读写文件的线程安全问题
-退出自动保存数据
+去掉api参数
 加日志
 将今日老婆等命令改为抽/换老婆，每日限制3次，增加查关系和取消功能，增加一键抽功能
 
