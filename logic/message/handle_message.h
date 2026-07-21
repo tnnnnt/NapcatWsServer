@@ -23,8 +23,8 @@ class HandleMessage {
 	upload_eat_or_drink_image(const ApiFunc& api, const json& message_array, int64_t group_id, std::string& word);
 	static void handle_upload_eat_or_drink_image(
 		const ApiFunc& api, const json& message_array, const std::string& word, int64_t group_id, bool is_eat);
-	static void handle_ban(const ApiFunc& api, const json& message_array, int64_t group_id, int64_t user_id);
-	static void handle_allow(const ApiFunc& api, const json& message_array, int64_t group_id, int64_t user_id);
+	static void
+	handle_ban_or_allow(const ApiFunc& api, const json& message_array, int64_t group_id, int64_t user_id, bool is_ban);
 	static void download_sex_images(
 		const ApiFunc& api, const json& messages, const std::string& save_dir, int& suc, int& total, json& message);
 	static void download_sex_image(

@@ -80,11 +80,11 @@ void HandleMessage::start(const json& event, const ApiFunc& api) {
 			return;
 		}
 		if (raw_message.find("banbanban") != std::string::npos) {
-			handle_ban(api, message_array, group_id, user_id);
+			handle_ban_or_allow(api, message_array, group_id, user_id, true);
 			return;
 		}
 		if (raw_message.find("allow") != std::string::npos) {
-			handle_allow(api, message_array, group_id, user_id);
+			handle_ban_or_allow(api, message_array, group_id, user_id, false);
 			return;
 		}
 	}
@@ -487,49 +487,28 @@ void HandleMessage::handle_upload_eat_or_drink_image(
 	params["message"] = message;
 	api("send_group_msg", params);
 }
-void HandleMessage::handle_ban(const ApiFunc& api, const json& message_array, int64_t group_id, int64_t user_id) {
-	if (common::CONFIG_STATIC.admin_qq == user_id) {
-		json params{};
-		params["group_id"] = group_id;
-		json message = json::array();
-		for (const auto& msg : message_array) {
-			const auto& type = msg.at("type");
-			if (type == "at") {
-				const std::string& ban_user_id = msg.at("data").at("qq").get<std::string>();
-				common::bans.insert(ban_user_id);
-				common::add_at_message(message, std::stoll(ban_user_id));
-			}
-		}
-		common::add_text_message(message, "已封禁");
-		params["message"] = message;
-		api("send_group_msg", params);
-		CommandRouter::save_ban_data();
-	}
-	else {
+void HandleMessage::handle_ban_or_allow(
+	const ApiFunc& api, const json& message_array, int64_t group_id, int64_t user_id, bool is_ban) {
+	if (common::CONFIG_STATIC.admin_qq != user_id) {
 		handle_no_permission(api, group_id, user_id);
+		return;
 	}
-}
-void HandleMessage::handle_allow(const ApiFunc& api, const json& message_array, int64_t group_id, int64_t user_id) {
-	if (common::CONFIG_STATIC.admin_qq == user_id) {
-		json params{};
-		params["group_id"] = group_id;
-		json message = json::array();
-		for (const auto& msg : message_array) {
-			const auto& type = msg.at("type");
-			if (type == "at") {
-				const std::string& ban_user_id = msg.at("data").at("qq").get<std::string>();
-				common::bans.erase(ban_user_id);
-				common::add_at_message(message, std::stoll(ban_user_id));
+	json message = json::array();
+	for (const auto& msg : message_array) {
+		if (msg.at("type") == "at") {
+			const std::string& target_id = msg.at("data").at("qq").get<std::string>();
+			if (is_ban) {
+				common::bans.insert(target_id);
 			}
+			else {
+				common::bans.erase(target_id);
+			}
+			common::add_at_message(message, std::stoll(target_id));
 		}
-		common::add_text_message(message, "已解封");
-		params["message"] = message;
-		api("send_group_msg", params);
-		CommandRouter::save_ban_data();
 	}
-	else {
-		handle_no_permission(api, group_id, user_id);
-	}
+	common::add_text_message(message, is_ban ? "已封禁" : "已解封");
+	api("send_group_msg", {{"group_id", group_id}, {"message", message}});
+	CommandRouter::save_ban_data();
 }
 void HandleMessage::download_sex_images(
 	const ApiFunc& api, const json& messages, const std::string& save_dir, int& suc, int& total, json& message) {
