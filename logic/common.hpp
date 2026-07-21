@@ -19,22 +19,34 @@ namespace common {
 
 	// 全局配置文件，仅在启动时读取一次，之后不会再读取
 	inline const std::string CONFIG_STATIC_FILE = WORK_DIR + "config_static.json";
-	inline int64_t ADMIN_QQ;	 // 管理员 QQ 号
-	inline int64_t ROBOT_QQ;	 // 机器人 QQ 号
-	inline int64_t YUN_ROBOT_QQ; // 小云机器人 QQ 号
-	inline int64_t TEST_GROUP;	 // 测试群
-	inline size_t POOL_SIZE;	 // 线程池大小
-	inline size_t RANK_SIZE;	 // 排行榜大小
+	struct ConfigStatic {
+		int64_t admin_qq{};		// 管理员 QQ 号
+		int64_t robot_qq{};		// 机器人 QQ 号
+		int64_t yun_robot_qq{}; // 小云机器人 QQ 号
+		int64_t test_group{};	// 测试群
+		size_t pool_size{};		// 线程池大小
+		size_t rank_size{};		// 排行榜大小
+	};
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ConfigStatic, admin_qq, robot_qq, yun_robot_qq, test_group, pool_size, rank_size)
+	inline ConfigStatic CONFIG_STATIC;
 
 	// 周期配置文件，在启动时读取一次，之后按设置时间间隔读取
 	inline const std::string CONFIG_PERIODIC_FILE = WORK_DIR + "config_periodic.json";
-	inline size_t BASE_DELAY;		  // 基础延迟（秒）
-	inline size_t RANDOM_DELAY;		  // 随机延迟（秒）
-	inline size_t TIME_SAVE_INTERVAL; // 数据保存时间间隔（秒）
+	struct ConfigPeriodic {
+		size_t base_delay{};		 // 基础延迟（秒）
+		size_t random_delay{};		 // 随机延迟（秒）
+		size_t time_save_interval{}; // 数据保存时间间隔（秒）
+	};
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ConfigPeriodic, base_delay, random_delay, time_save_interval)
+	inline ConfigPeriodic CONFIG_PERIODIC;
 
 	// 每日配置文件，在启动时读取一次，之后每天0点读取一次
 	inline const std::string CONFIG_DAILY_FILE = WORK_DIR + "config_daily.json";
-	inline size_t MIN_ACTIVITY_LEVEL; // 最小活跃度要求（群等级）
+	struct ConfigDaily {
+		size_t min_activity_level{}; // 最小活跃度要求（群等级）
+	};
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ConfigDaily, min_activity_level)
+	inline ConfigDaily CONFIG_DAILY;
 
 	// 吃吃喝喝色色
 	inline const std::string PATH = "../../../../../";							   // 相对路径

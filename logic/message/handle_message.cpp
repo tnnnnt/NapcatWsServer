@@ -11,7 +11,7 @@ void HandleMessage::start(const json& event, const ApiFunc& api) {
 	}
 	else if (message_type == "group") {
 		const int64_t group_id = event.at("group_id").get<int64_t>();
-		if (group_id == common::TEST_GROUP) {
+		if (group_id == common::CONFIG_STATIC.test_group) {
 			json params{};
 			params["group_id"] = group_id;
 			json message = json::array();
@@ -319,7 +319,7 @@ void HandleMessage::handle_oral_edict(const ApiFunc& api,
 									  int64_t group_id,
 									  int64_t user_id,
 									  const std::string& command) {
-	if (common::ADMIN_QQ == user_id) {
+	if (common::CONFIG_STATIC.admin_qq == user_id) {
 		json params{};
 		params["group_id"] = group_id;
 		json message = json::array();
@@ -333,7 +333,7 @@ void HandleMessage::handle_oral_edict(const ApiFunc& api,
 			member_message_rank.insert(
 				member_message_rank.end(), member_message_number.begin(), member_message_number.end());
 		}
-		const size_t k = std::min(common::RANK_SIZE, member_message_rank.size());
+		const size_t k = std::min(common::CONFIG_STATIC.rank_size, member_message_rank.size());
 		std::partial_sort(member_message_rank.begin(),
 						  member_message_rank.begin() + k,
 						  member_message_rank.end(),
@@ -381,7 +381,7 @@ bool HandleMessage::is_commond_of_upload_sex_image(const std::string& raw_messag
 			has_call_yun |= text.find("小云") != std::string::npos;
 		}
 		else if (type == "at") {
-			has_call_yun |= std::stoll(msg.at("data").at("qq").get<std::string>()) == common::YUN_ROBOT_QQ;
+			has_call_yun |= std::stoll(msg.at("data").at("qq").get<std::string>()) == common::CONFIG_STATIC.yun_robot_qq;
 		}
 		if (has_upload_command && has_call_yun) {
 			return true;
@@ -488,7 +488,7 @@ void HandleMessage::handle_upload_eat_or_drink_image(
 	api("send_group_msg", params);
 }
 void HandleMessage::handle_ban(const ApiFunc& api, const json& message_array, int64_t group_id, int64_t user_id) {
-	if (common::ADMIN_QQ == user_id) {
+	if (common::CONFIG_STATIC.admin_qq == user_id) {
 		json params{};
 		params["group_id"] = group_id;
 		json message = json::array();
@@ -510,7 +510,7 @@ void HandleMessage::handle_ban(const ApiFunc& api, const json& message_array, in
 	}
 }
 void HandleMessage::handle_allow(const ApiFunc& api, const json& message_array, int64_t group_id, int64_t user_id) {
-	if (common::ADMIN_QQ == user_id) {
+	if (common::CONFIG_STATIC.admin_qq == user_id) {
 		json params{};
 		params["group_id"] = group_id;
 		json message = json::array();
@@ -564,26 +564,10 @@ void HandleMessage::handle_no_permission(const ApiFunc& api, int64_t group_id, i
 }
 /*
 1.急急急
-按读写类型分类文件（是否可以在群聊中直接修改等）
-	只读
-		仅在启动时读
-			config_static.json
-		启动时读，然后每天0点读一次
-			config_daily.json
-			fortunes.txt
-		启动时读，然后周期性读
-			config_periodic.json
-			sex_upload_commond_keywords.txt
-	读写
-		启动时读到变量中，运行时读写变量，修改变量后立即写入文件
-			ban.txt
-			notice_group_member.json
-		启动时读到变量中，运行时读写变量，每天0点清空变量，周期性写入文件
-			today_group_member_message_number.json
 注意读写文件的线程安全问题
 去掉api参数
 加日志
-将今日老婆等命令改为抽/换老婆，每日限制3次，增加查关系和取消功能，增加一键抽功能
+将今日老婆等命令改为抽/换老婆，每日限制3次，增加查关系和取消功能，增加一键抽功能，断绝关系功能
 
 2.必要
 性能优化
@@ -605,6 +589,7 @@ void HandleMessage::handle_no_permission(const ApiFunc& api, int64_t group_id, i
 设置群成员专属提醒
 日历
 上传文件自动压缩
+哔哩哔哩直播监控
 
 4.有趣的功能
 老婆跑了等

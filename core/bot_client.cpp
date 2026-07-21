@@ -34,6 +34,7 @@ void BotClient::start() {
 	// 启动时读，然后每天0点读一次
 	CommandRouter::load_config_daily();
 	CommandRouter::load_fortune();
+	CommandRouter::updata_group_members_data([this](auto action, auto params) { return call_api(action, params); });
 	// 启动时读，然后周期性读
 	CommandRouter::load_config_periodic();
 	CommandRouter::load_sex_upload_commond_keyword();
@@ -46,14 +47,13 @@ void BotClient::start() {
 	CommandRouter::load_today_group_member_message_number_data();
 
 	reader_ = std::thread([this]() { read_loop(); });
-	for (size_t i = 0; i < common::POOL_SIZE; ++i) {
+	for (size_t i = 0; i < common::CONFIG_STATIC.pool_size; ++i) {
 		workers_.emplace_back([this]() { worker_loop(); });
 	}
 	// 启动发送线程（限速核心）
 	sender_ = std::thread([this]() { sender_loop(); });
 	schedule_midnight_task_ = std::thread([this]() { schedule_midnight_task_loop(); });
 	schedule_periodic_task_ = std::thread([this]() { schedule_periodic_task_loop(); });
-	CommandRouter::updata_group_members_data([this](auto action, auto params) { return call_api(action, params); });
 }
 
 void BotClient::read_loop() {
@@ -69,7 +69,7 @@ void BotClient::read_loop() {
 		catch (std::exception& e) {
 			std::cout << "read error: " << e.what() << std::endl;
 			std::cout << "msg: \n" << msg << std::endl;
-			std::this_thread::sleep_for(std::chrono::seconds(common::TIME_SAVE_INTERVAL));
+			std::this_thread::sleep_for(std::chrono::seconds(common::CONFIG_PERIODIC.time_save_interval));
 		}
 	}
 }
@@ -121,7 +121,8 @@ void BotClient::sender_loop() {
 			if (msg["action"] == "send_private_msg" || msg["action"] == "send_group_msg" ||
 				msg["action"] == "send_msg") {
 				// 限速（核心）
-				std::this_thread::sleep_for(std::chrono::seconds(common::BASE_DELAY + rand() % common::RANDOM_DELAY));
+				std::this_thread::sleep_for(std::chrono::seconds(common::CONFIG_PERIODIC.base_delay +
+																 rand() % common::CONFIG_PERIODIC.random_delay));
 			}
 			std::lock_guard<std::mutex> lock(ws_mutex_);
 			ws_.write(boost::asio::buffer(msg.dump()));
@@ -178,7 +179,7 @@ void BotClient::schedule_midnight_task_loop() {
 
 void BotClient::schedule_periodic_task_loop() {
 	while (true) {
-		std::this_thread::sleep_for(std::chrono::seconds(common::TIME_SAVE_INTERVAL));
+		std::this_thread::sleep_for(std::chrono::seconds(common::CONFIG_PERIODIC.time_save_interval));
 		CommandRouter::load_config_periodic();
 		CommandRouter::load_sex_upload_commond_keyword();
 		CommandRouter::save_today_group_member_message_number_data();
