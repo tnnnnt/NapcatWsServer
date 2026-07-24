@@ -12,12 +12,9 @@ void HandleMessage::start(const json& event, const ApiFunc& api) {
 	else if (message_type == "group") {
 		const int64_t group_id = event.at("group_id").get<int64_t>();
 		if (group_id == common::CONFIG_STATIC.test_group) {
-			json params{};
-			params["group_id"] = group_id;
 			json message = json::array();
 			common::add_text_message(message, event.dump(4));
-			params["message"] = message;
-			api("send_group_msg", params);
+			common::send_group_msg(api, group_id, message);
 		}
 		const int64_t user_id = event.at("user_id").get<int64_t>();
 		const auto time = event.at("time").get<int64_t>() + 28800; // 转为北京时间
@@ -84,28 +81,22 @@ void HandleMessage::handle_eat_drink(const ApiFunc& api,
 	const auto& dir = is_eat ? common::EAT_DIR : common::DRINK_DIR;
 	std::vector<std::string> files;
 	common::get_files(dir, files);
-	json params{};
-	params["group_id"] = group_id;
-	json message = json::array();
 	const std::string random_file = files[time % files.size()];
+	json message = json::array();
 	common::add_text_message(message, "推荐" + common::remove_extension(random_file));
 	common::add_image_message(message, "file:///" + dir + random_file);
-	params["message"] = message;
-	api("send_group_msg", params);
+	common::send_group_msg(api, group_id, message);
 }
 void HandleMessage::handle_today_fortune(const ApiFunc& api, int64_t group_id, int64_t user_id, int64_t seed) {
-	json params{};
-	params["group_id"] = group_id;
-	json message = json::array();
 	int luckey_num = 0;
 	common::shuffle_vector(common::fortunes, luckey_num, seed);
+	json message = json::array();
 	common::add_at_message(message, user_id);
 	common::add_text_message(message,
 							 "\n今日运势（仅供娱乐）\n宜：" + common::fortunes[0] + " " + common::fortunes[1] + " " +
 								 common::fortunes[2] + "\n忌：" + common::fortunes[3] + " " + common::fortunes[4] +
 								 " " + common::fortunes[5] + "\n幸运数字：" + std::to_string(luckey_num));
-	params["message"] = message;
-	api("send_group_msg", params);
+	common::send_group_msg(api, group_id, message);
 }
 void HandleMessage::handle_today_relation(
 	const ApiFunc& api, int64_t group_id, int64_t user_id, int64_t seed, const std::string& text) {
@@ -157,10 +148,6 @@ void HandleMessage::handle_today_relation(
 	}
 	std::string match_name;
 	common::get_group_member_name(api, group_id, match_id, match_name);
-	json params{};
-	params["group_id"] = group_id;
-	json message = json::array();
-	common::add_at_message(message, user_id);
 	std::string last_sentence;
 	if (text == "今日老婆") {
 		last_sentence = "请好好对待她哦~";
@@ -174,10 +161,11 @@ void HandleMessage::handle_today_relation(
 	else if (text == "今日主人") {
 		last_sentence = "快去叫主人！";
 	}
+	json message = json::array();
+	common::add_at_message(message, user_id);
 	common::add_text_message(message, "\n你的" + text + "是【" + match_name + "】\n" + last_sentence);
 	common::add_image_message(message, "https://q.qlogo.cn/g?b=qq&nk=" + std::to_string(match_id) + "&s=4");
-	params["message"] = message;
-	api("send_group_msg", params);
+	common::send_group_msg(api, group_id, message);
 }
 void HandleMessage::handle_relation_graph(const ApiFunc& api, int64_t group_id) {
 	const std::string file_name = common::RELATION_DIR + std::to_string(group_id) + ".png";
@@ -241,12 +229,9 @@ void HandleMessage::handle_relation_graph(const ApiFunc& api, int64_t group_id) 
 								common::RELATION_DIR + "relations.json " + file_name;
 		system(cmd.c_str());
 	}
-	json params{};
-	params["group_id"] = group_id;
 	json message = json::array();
 	common::add_image_message(message, "file:///" + file_name);
-	params["message"] = message;
-	api("send_group_msg", params);
+	common::send_group_msg(api, group_id, message);
 }
 void HandleMessage::handle_subscribe(const ApiFunc& api, int64_t group_id, int64_t user_id) {
 	const std::string group_id_str = std::to_string(group_id);
@@ -259,13 +244,10 @@ void HandleMessage::handle_subscribe(const ApiFunc& api, int64_t group_id, int64
 		members.push_back(user_id_str);
 		CommandRouter::save_notice_group_member_data();
 	}
-	json params{};
-	params["group_id"] = group_id;
 	json message = json::array();
 	common::add_at_message(message, user_id);
 	common::add_text_message(message, "\n 订阅成功喵~");
-	params["message"] = message;
-	api("send_group_msg", params);
+	common::send_group_msg(api, group_id, message);
 }
 void HandleMessage::handle_unsubscribe(const ApiFunc& api, int64_t group_id, int64_t user_id) {
 	const std::string group_id_str = std::to_string(group_id);
@@ -275,19 +257,14 @@ void HandleMessage::handle_unsubscribe(const ApiFunc& api, int64_t group_id, int
 		members.erase(std::remove(members.begin(), members.end(), user_id_str), members.end());
 		CommandRouter::save_notice_group_member_data();
 	}
-	json params{};
-	params["group_id"] = group_id;
 	json message = json::array();
 	common::add_at_message(message, user_id);
 	common::add_text_message(message, "\n 取消订阅成功喵~");
-	params["message"] = message;
-	api("send_group_msg", params);
+	common::send_group_msg(api, group_id, message);
 }
 void HandleMessage::handle_get_sex_image(const ApiFunc& api, int64_t group_id, int64_t time) {
 	std::vector<std::string> files;
 	common::get_files(common::SEX_DIR, files);
-	json params{};
-	params["group_id"] = group_id;
 	json message = json::array();
 	if (files.empty()) {
 		common::add_text_message(message, "没有色图了喵~");
@@ -296,8 +273,7 @@ void HandleMessage::handle_get_sex_image(const ApiFunc& api, int64_t group_id, i
 		const std::string random_file = files[time % files.size()];
 		common::add_image_message(message, "file:///" + common::SEX_DIR + random_file);
 	}
-	params["message"] = message;
-	api("send_group_msg", params);
+	common::send_group_msg(api, group_id, message);
 }
 void HandleMessage::filter_valid_messages(json& message_array) {
 	message_array.erase(std::remove_if(message_array.begin(),
@@ -359,7 +335,7 @@ void HandleMessage::handle_upload_sex_image(const ApiFunc& api,
 		}
 	}
 	common::add_text_message(message, "上传完成！成功率：" + std::to_string(suc) + "/" + std::to_string(total));
-	api("send_group_msg", {{"group_id", group_id}, {"message", message}});
+	common::send_group_msg(api, group_id, message);
 }
 bool HandleMessage::upload_eat_or_drink_image(const ApiFunc& api,
 											  const json& message_array,
@@ -412,8 +388,6 @@ void HandleMessage::handle_upload_eat_or_drink_image(
 			break;
 		}
 	}
-	json params{};
-	params["group_id"] = group_id;
 	json message = json::array();
 	if (is_eat) {
 		if (suc) {
@@ -431,8 +405,7 @@ void HandleMessage::handle_upload_eat_or_drink_image(
 			common::add_text_message(message, "yue~ " + word + "真难喝！");
 		}
 	}
-	params["message"] = message;
-	api("send_group_msg", params);
+	common::send_group_msg(api, group_id, message);
 }
 void HandleMessage::handle_ban_or_allow(
 	const ApiFunc& api, const json& message_array, int64_t group_id, int64_t user_id, bool is_ban) {
@@ -454,7 +427,7 @@ void HandleMessage::handle_ban_or_allow(
 		}
 	}
 	common::add_text_message(message, is_ban ? "已封禁" : "已解封");
-	api("send_group_msg", {{"group_id", group_id}, {"message", message}});
+	common::send_group_msg(api, group_id, message);
 	CommandRouter::save_ban_data();
 }
 void HandleMessage::download_sex_images(
@@ -480,13 +453,10 @@ void HandleMessage::download_sex_image(
 	}
 }
 void HandleMessage::handle_no_permission(const ApiFunc& api, int64_t group_id, int64_t user_id) {
-	json params{};
-	params["group_id"] = group_id;
 	json message = json::array();
 	common::add_at_message(message, user_id);
 	common::add_text_message(message, "\n权限不足");
-	params["message"] = message;
-	api("send_group_msg", params);
+	common::send_group_msg(api, group_id, message);
 }
 /*
 1.急急急

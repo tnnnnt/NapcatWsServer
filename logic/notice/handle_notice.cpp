@@ -14,12 +14,9 @@ void HandleNotice::start(const json& event, const ApiFunc& api) {
 		const auto user_id = event.at("user_id").get<int64_t>();
 		const std::string nick =
 			api("get_stranger_info", json{{"user_id", user_id}})["data"].at("nick").get<std::string>();
-		json params{};
-		params["group_id"] = group_id;
 		json message = json::array();
 		common::add_text_message(message, "【" + nick + "】(" + std::to_string(user_id) + ") 遗憾离场 v_v");
-		params["message"] = message;
-		const int message_id = api("send_group_msg", params)["data"].at("message_id").get<int>();
+		const int message_id = common::send_group_msg(api, group_id, message)["data"].at("message_id").get<int>();
 		const std::string group_id_str = std::to_string(group_id);
 		const std::string user_id_str = std::to_string(user_id);
 		std::vector<int64_t> user_ids;
@@ -39,21 +36,17 @@ void HandleNotice::start(const json& event, const ApiFunc& api) {
 			}
 			common::add_at_message(message, user_ids[i]);
 			if ((i + 1) % 20 == 0 || i == user_count - 1) {
-				params["message"] = message;
-				api("send_group_msg", params);
+				common::send_group_msg(api, group_id, message);
 			}
 		}
 	}
 	else if (notice_type == "group_increase") {
 		const auto group_id = event.at("group_id").get<int64_t>();
 		const auto user_id = event.at("user_id").get<int64_t>();
-		json params{};
-		params["group_id"] = group_id;
 		json message = json::array();
 		common::add_at_message(message, user_id);
 		common::add_text_message(message, " 欢迎喵~爱你喵~");
-		params["message"] = message;
-		api("send_group_msg", params);
+		common::send_group_msg(api, group_id, message);
 	}
 	else if (notice_type == "group_ban") {
 	}
