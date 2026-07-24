@@ -54,27 +54,10 @@ void CommandRouter::load_config_daily() {
 	common::CONFIG_DAILY = json::parse(ifs).get<common::ConfigDaily>();
 }
 void CommandRouter::load_fortune() {
-	std::ifstream ifs_fortune(common::FORTUNE_FILE);
-	if (!ifs_fortune.is_open()) {
-		std::cerr << "无法打开运势文件: " << common::FORTUNE_FILE << std::endl;
-		return;
-	}
-	std::string fortune;
-	common::fortunes.clear();
-	while (std::getline(ifs_fortune, fortune)) {
-		common::fortunes.push_back(fortune);
-	}
+	common::fortunes = common::read_file_lines(common::FORTUNE_FILE);
 }
 void CommandRouter::load_sex_upload_commond_keyword() {
-	std::ifstream ifs_sex_upload_commond_keyword(common::SEX_UPLOAD_COMMOND_KEYWORD_FILE);
-	if (!ifs_sex_upload_commond_keyword.is_open()) {
-		std::cerr << "无法打开上传色图命令关键字文件: " << common::SEX_UPLOAD_COMMOND_KEYWORD_FILE << std::endl;
-		return;
-	}
-	std::string sex_upload_commond_keyword;
-	while (std::getline(ifs_sex_upload_commond_keyword, sex_upload_commond_keyword)) {
-		common::sex_upload_commond_keywords.push_back(sex_upload_commond_keyword);
-	}
+	common::sex_upload_commond_keywords = common::read_file_lines(common::SEX_UPLOAD_COMMOND_KEYWORD_FILE);
 }
 void CommandRouter::updata_group_members_data(const ApiFunc& api) {
 	std::lock_guard<std::mutex> lock(common::group_members_mutex);
@@ -113,14 +96,8 @@ void CommandRouter::load_notice_group_member_data() {
 	ifs >> common::notice_group_member_json;
 }
 void CommandRouter::load_ban_data() {
-	std::ifstream ifs_ban(common::BAN_FILE);
-	if (!ifs_ban.is_open()) {
-		std::cerr << "无法打开BAN文件: " << common::BAN_FILE << std::endl;
-		return;
-	}
-	std::string ban;
-	while (std::getline(ifs_ban, ban)) {
-		common::bans.insert(ban);
+	for (auto& line : common::read_file_lines(common::BAN_FILE)) {
+		common::bans.insert(std::move(line));
 	}
 }
 void CommandRouter::save_ban_data() {

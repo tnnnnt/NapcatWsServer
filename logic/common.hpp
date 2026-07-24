@@ -92,6 +92,20 @@ namespace common {
 	inline std::unordered_map<int64_t, std::vector<int64_t>> group_members;		   // 群成员列表
 	inline std::unordered_map<int64_t, std::vector<int64_t>> group_active_members; // 活跃群成员列表
 
+	// 读取文件的每一行到 vector 中
+	inline std::vector<std::string> read_file_lines(const std::string& path) {
+		std::vector<std::string> lines;
+		std::ifstream ifs(path);
+		if (!ifs.is_open()) {
+			std::cerr << "无法打开文件: " << path << std::endl;
+			return lines;
+		}
+		std::string line;
+		while (std::getline(ifs, line)) {
+			lines.push_back(std::move(line));
+		}
+		return lines;
+	}
 	// 去掉字符串首尾的空白字符
 	inline void trim(std::string& str) {
 		const auto first = str.find_first_not_of(" \t\n\r\f\v");
