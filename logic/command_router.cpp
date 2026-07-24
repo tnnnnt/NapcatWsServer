@@ -24,13 +24,6 @@ void CommandRouter::daily(const ApiFunc& api) {
 	load_config_daily();
 	load_fortune();
 	updata_group_members_data(api);
-	for (const int64_t& group_id : common::group_ids) {
-		send_today_group_member_message_number_data(group_id, api);
-	}
-	{
-		std::lock_guard<std::mutex> lock(common::today_group_member_message_number_mutex);
-		common::today_group_member_message_number.clear();
-	}
 	{
 		std::lock_guard<std::mutex> lock(common::group_member_relations_mutex);
 		common::group_member_relations.clear();
@@ -110,67 +103,6 @@ void CommandRouter::updata_group_members_data(const ApiFunc& api) {
 			}
 		}
 	}
-}
-void CommandRouter::save_today_group_member_message_number_data() {
-	std::lock_guard<std::mutex> lock(common::today_group_member_message_number_mutex);
-	json j{};
-	for (const auto& group_pair : common::today_group_member_message_number) {
-		const std::string group_id = std::to_string(group_pair.first);
-		for (const auto& user_pair : group_pair.second) {
-			const std::string user_id = std::to_string(user_pair.first);
-			j[group_id][user_id] = user_pair.second;
-		}
-	}
-	std::ofstream ofs(common::TODAY_GROUP_MEMBER_MESSAGE_NUMBER_FILE);
-	ofs << j.dump();
-}
-void CommandRouter::load_today_group_member_message_number_data() {
-	std::lock_guard<std::mutex> lock(common::today_group_member_message_number_mutex);
-	json j{};
-	std::ifstream ifs(common::TODAY_GROUP_MEMBER_MESSAGE_NUMBER_FILE);
-	ifs >> j;
-	for (auto& [group_id_str, users] : j.items()) {
-		int64_t group_id = std::stoll(group_id_str);
-		for (auto& [user_id_str, count] : users.items()) {
-			int64_t user_id = std::stoll(user_id_str);
-			common::today_group_member_message_number[group_id][user_id] = count.get<int>();
-		}
-	}
-}
-void CommandRouter::del_today_group_member_message_number_data(int64_t group_id, int64_t user_id) {
-	std::lock_guard<std::mutex> lock(common::today_group_member_message_number_mutex);
-	common::today_group_member_message_number[group_id].erase(user_id);
-}
-void CommandRouter::send_today_group_member_message_number_data(int64_t group_id, const ApiFunc& api) {
-	json params{};
-	params["group_id"] = group_id;
-	json message = json::array();
-	common::add_text_message(message, "今日龙王榜\n\n");
-	std::vector<std::pair<int64_t, int>> member_message_rank;
-	{
-		std::lock_guard<std::mutex> lock(common::today_group_member_message_number_mutex);
-		const auto& member_message_number = common::today_group_member_message_number[group_id];
-		member_message_rank.insert(
-			member_message_rank.end(), member_message_number.begin(), member_message_number.end());
-	}
-	const size_t k = std::min(common::CONFIG_STATIC.rank_size, member_message_rank.size());
-	std::partial_sort(member_message_rank.begin(),
-					  member_message_rank.begin() + k,
-					  member_message_rank.end(),
-					  [](const std::pair<int64_t, int>& a, const std::pair<int64_t, int>& b) {
-						  return a.second > b.second; // 按 value 降序
-					  });
-	for (size_t i = 0; i < k; ++i) {
-		const int64_t user_id = member_message_rank[i].first;
-		const int message_num = member_message_rank[i].second;
-		std::string user_name;
-		common::get_group_member_name(api, group_id, user_id, user_name);
-		common::add_text_message(
-			message, std::to_string(i + 1) + ". " + user_name + " 发言数：" + std::to_string(message_num) + "\n");
-		common::add_image_message(message, "https://q.qlogo.cn/g?b=qq&nk=" + std::to_string(user_id) + "&s=1");
-	}
-	params["message"] = message;
-	api("send_group_msg", params);
 }
 void CommandRouter::save_notice_group_member_data() {
 	std::ofstream ofs(common::NOTICE_GROUP_MEMBER_FILE);

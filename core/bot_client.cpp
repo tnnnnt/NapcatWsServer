@@ -43,8 +43,6 @@ void BotClient::start() {
 	// 启动时读到变量中，运行时读写变量，修改变量后立即写入文件
 	CommandRouter::load_ban_data();
 	CommandRouter::load_notice_group_member_data();
-	// 启动时读到变量中，运行时读写变量，每天0点清空变量，周期性写入文件
-	CommandRouter::load_today_group_member_message_number_data();
 
 	reader_ = std::thread([this]() { read_loop(); });
 	for (size_t i = 0; i < common::CONFIG_STATIC.pool_size; ++i) {
@@ -182,6 +180,5 @@ void BotClient::schedule_periodic_task_loop() {
 		std::this_thread::sleep_for(std::chrono::seconds(common::CONFIG_PERIODIC.time_save_interval));
 		CommandRouter::load_config_periodic();
 		CommandRouter::load_sex_upload_commond_keyword();
-		CommandRouter::save_today_group_member_message_number_data();
 	}
 }

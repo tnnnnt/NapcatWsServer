@@ -20,10 +20,6 @@ void HandleMessage::start(const json& event, const ApiFunc& api) {
 			api("send_group_msg", params);
 		}
 		const int64_t user_id = event.at("user_id").get<int64_t>();
-		{
-			std::lock_guard<std::mutex> lock(common::today_group_member_message_number_mutex);
-			++common::today_group_member_message_number[group_id][user_id];
-		}
 		const auto time = event.at("time").get<int64_t>() + 28800; // 转为北京时间
 		const std::string raw_message = event.at("raw_message").get<std::string>();
 
@@ -47,10 +43,6 @@ void HandleMessage::start(const json& event, const ApiFunc& api) {
 			handle_relation_graph(api, group_id);
 			return;
 		}
-		if (raw_message == "今日龙王榜") {
-			handle_message_rank(api, group_id);
-			return;
-		}
 		if (raw_message == "订阅通知") {
 			handle_subscribe(api, group_id, user_id);
 			return;
@@ -61,11 +53,6 @@ void HandleMessage::start(const json& event, const ApiFunc& api) {
 		}
 		if (raw_message == "来点色图") {
 			handle_get_sex_image(api, group_id, time);
-			return;
-		}
-		std::string command;
-		if (common::starts_with_and_trim(raw_message, "传旨！", command)) {
-			handle_oral_edict(api, group_id, user_id, command);
 			return;
 		}
 
@@ -261,9 +248,6 @@ void HandleMessage::handle_relation_graph(const ApiFunc& api, int64_t group_id) 
 	params["message"] = message;
 	api("send_group_msg", params);
 }
-void HandleMessage::handle_message_rank(const ApiFunc& api, int64_t group_id) {
-	CommandRouter::send_today_group_member_message_number_data(group_id, api);
-}
 void HandleMessage::handle_subscribe(const ApiFunc& api, int64_t group_id, int64_t user_id) {
 	const std::string group_id_str = std::to_string(group_id);
 	const std::string user_id_str = std::to_string(user_id);
@@ -314,43 +298,6 @@ void HandleMessage::handle_get_sex_image(const ApiFunc& api, int64_t group_id, i
 	}
 	params["message"] = message;
 	api("send_group_msg", params);
-}
-void HandleMessage::handle_oral_edict(const ApiFunc& api,
-									  int64_t group_id,
-									  int64_t user_id,
-									  const std::string& command) {
-	if (common::CONFIG_STATIC.admin_qq == user_id) {
-		json params{};
-		params["group_id"] = group_id;
-		json message = json::array();
-		common::add_text_message(message, "传");
-		common::add_at_message(message, user_id);
-		common::add_text_message(message, "口谕：\n\n");
-		std::vector<std::pair<int64_t, int>> member_message_rank;
-		{
-			std::lock_guard<std::mutex> lock(common::today_group_member_message_number_mutex);
-			const auto& member_message_number = common::today_group_member_message_number[group_id];
-			member_message_rank.insert(
-				member_message_rank.end(), member_message_number.begin(), member_message_number.end());
-		}
-		const size_t k = std::min(common::CONFIG_STATIC.rank_size, member_message_rank.size());
-		std::partial_sort(member_message_rank.begin(),
-						  member_message_rank.begin() + k,
-						  member_message_rank.end(),
-						  [](const std::pair<int64_t, int>& a, const std::pair<int64_t, int>& b) {
-							  return a.second > b.second; // 按 value 降序
-						  });
-		for (size_t i = 0; i < k; ++i) {
-			const int64_t user_id = member_message_rank[i].first;
-			common::add_at_message(message, user_id);
-		}
-		common::add_text_message(message, "\n\n" + command);
-		params["message"] = message;
-		api("send_group_msg", params);
-	}
-	else {
-		handle_no_permission(api, group_id, user_id);
-	}
 }
 void HandleMessage::filter_valid_messages(json& message_array) {
 	message_array.erase(std::remove_if(message_array.begin(),
@@ -577,6 +524,8 @@ void HandleMessage::handle_no_permission(const ApiFunc& api, int64_t group_id, i
 戳一戳哈气
 大富翁
 发送表情包
+今日龙王榜
+传旨
 
 5.vrc相关功能
 vrc id 绑定

@@ -10,11 +10,9 @@ class HandleMessage {
 	static void
 	handle_today_relation(const ApiFunc& api, int64_t group_id, int64_t user_id, int64_t seed, const std::string& text);
 	static void handle_relation_graph(const ApiFunc& api, int64_t group_id);
-	static void handle_message_rank(const ApiFunc& api, int64_t group_id);
 	static void handle_subscribe(const ApiFunc& api, int64_t group_id, int64_t user_id);
 	static void handle_unsubscribe(const ApiFunc& api, int64_t group_id, int64_t user_id);
 	static void handle_get_sex_image(const ApiFunc& api, int64_t group_id, int64_t time);
-	static void handle_oral_edict(const ApiFunc& api, int64_t group_id, int64_t user_id, const std::string& command);
 	static void filter_valid_messages(json& message_array);
 	static bool is_commond_of_upload_sex_image(const std::string& raw_message, const json& message_array);
 	static void

@@ -12,7 +12,6 @@ void HandleNotice::start(const json& event, const ApiFunc& api) {
 	else if (notice_type == "group_decrease") {
 		const auto group_id = event.at("group_id").get<int64_t>();
 		const auto user_id = event.at("user_id").get<int64_t>();
-		CommandRouter::del_today_group_member_message_number_data(group_id, user_id);
 		const std::string nick =
 			api("get_stranger_info", json{{"user_id", user_id}})["data"].at("nick").get<std::string>();
 		json params{};

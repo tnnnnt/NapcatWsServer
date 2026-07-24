@@ -16,12 +16,6 @@ class CommandRouter {
 
 	static void updata_group_members_data(const ApiFunc& api);
 
-	static void save_today_group_member_message_number_data();
-	static void load_today_group_member_message_number_data();
-
-	static void del_today_group_member_message_number_data(int64_t group_id, int64_t user_id);
-	static void send_today_group_member_message_number_data(int64_t group_id, const ApiFunc& api);
-
 	static void save_notice_group_member_data();
 	static void load_notice_group_member_data();
 

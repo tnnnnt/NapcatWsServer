@@ -25,9 +25,8 @@ namespace common {
 		int64_t yun_robot_qq{}; // 小云机器人 QQ 号
 		int64_t test_group{};	// 测试群
 		size_t pool_size{};		// 线程池大小
-		size_t rank_size{};		// 排行榜大小
 	};
-	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ConfigStatic, admin_qq, robot_qq, yun_robot_qq, test_group, pool_size, rank_size)
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ConfigStatic, admin_qq, robot_qq, yun_robot_qq, test_group, pool_size)
 	inline ConfigStatic CONFIG_STATIC;
 
 	// 周期配置文件，在启动时读取一次，之后按设置时间间隔读取
@@ -86,13 +85,6 @@ namespace common {
 	// 通知
 	inline const std::string NOTICE_GROUP_MEMBER_FILE = SAVE_DIR + "notice_group_member.json"; // 群公告成员文件
 	inline json notice_group_member_json; // 群公告成员列表，外层 key 是 group_id，内层是 user_id 列表
-
-	// 今日群成员发言数文件
-	inline const std::string TODAY_GROUP_MEMBER_MESSAGE_NUMBER_FILE =
-		SAVE_DIR + "today_group_member_message_number.json";
-	inline std::mutex today_group_member_message_number_mutex; // 保护 group_member_message_number 的互斥锁
-	inline std::unordered_map<int64_t, std::unordered_map<int64_t, int>>
-		today_group_member_message_number; // 今日群成员发言数
 
 	// 群基础数据
 	inline std::mutex group_members_mutex;										   // 保护 group_members 的互斥锁
