@@ -95,14 +95,3 @@ void CommandRouter::load_notice_group_member_data() {
 	std::ifstream ifs(common::NOTICE_GROUP_MEMBER_FILE);
 	ifs >> common::notice_group_member_json;
 }
-void CommandRouter::load_ban_data() {
-	for (auto& line : common::read_file_lines(common::BAN_FILE)) {
-		common::bans.insert(std::move(line));
-	}
-}
-void CommandRouter::save_ban_data() {
-	std::ofstream ofs_ban(common::BAN_FILE);
-	for (const auto& ban : common::bans) {
-		ofs_ban << ban << "\n";
-	}
-}

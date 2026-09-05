@@ -18,7 +18,4 @@ class CommandRouter {
 
 	static void save_notice_group_member_data();
 	static void load_notice_group_member_data();
-
-	static void load_ban_data();
-	static void save_ban_data();
 };

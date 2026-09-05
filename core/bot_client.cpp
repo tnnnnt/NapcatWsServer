@@ -41,7 +41,6 @@ void BotClient::start() {
 
 	// 读写
 	// 启动时读到变量中，运行时读写变量，修改变量后立即写入文件
-	CommandRouter::load_ban_data();
 	CommandRouter::load_notice_group_member_data();
 
 	reader_ = std::thread([this]() { read_loop(); });

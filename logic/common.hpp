@@ -64,10 +64,6 @@ namespace common {
 	inline const std::string SEX_UPLOAD_COMMOND_KEYWORD_FILE = SAVE_DIR + "sex_upload_commond_keyword.txt"; // 关键字
 	inline std::vector<std::string> sex_upload_commond_keywords; // 上传色图命令关键字列表
 
-	// ban
-	inline const std::string BAN_FILE = SAVE_DIR + "ban.txt"; // 封禁用户文件
-	inline std::unordered_set<std::string> bans;			  // 封禁用户列表
-
 	// 关系
 	inline const std::string RELATION_PY = SCRIPT_DIR + "relations.py"; // 群成员关系文件
 	inline const std::string AVATAR_DIR = WORK_DIR + "avatar/";			// 头像
