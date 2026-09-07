@@ -102,6 +102,15 @@ namespace common {
 		}
 		return lines;
 	}
+	// 读取 json 配置文件到指定类型的对象中
+	template <typename T> inline void load_json_config(const std::string& path, T& out) {
+		std::ifstream ifs(path);
+		if (!ifs.is_open()) {
+			std::cerr << "无法打开配置文件: " << path << std::endl;
+			return;
+		}
+		out = json::parse(ifs).get<T>();
+	}
 	// 去掉字符串首尾的空白字符
 	inline void trim(std::string& str) {
 		const auto first = str.find_first_not_of(" \t\n\r\f\v");

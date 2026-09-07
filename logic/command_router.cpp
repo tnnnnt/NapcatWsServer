@@ -30,28 +30,13 @@ void CommandRouter::daily(const ApiFunc& api) {
 	}
 }
 void CommandRouter::load_config_static() {
-	std::ifstream ifs(common::CONFIG_STATIC_FILE);
-	if (!ifs.is_open()) {
-		std::cerr << "无法打开配置文件: " << common::CONFIG_STATIC_FILE << std::endl;
-		return;
-	}
-	common::CONFIG_STATIC = json::parse(ifs).get<common::ConfigStatic>();
+	common::load_json_config(common::CONFIG_STATIC_FILE, common::CONFIG_STATIC);
 }
 void CommandRouter::load_config_periodic() {
-	std::ifstream ifs(common::CONFIG_PERIODIC_FILE);
-	if (!ifs.is_open()) {
-		std::cerr << "无法打开配置文件: " << common::CONFIG_PERIODIC_FILE << std::endl;
-		return;
-	}
-	common::CONFIG_PERIODIC = json::parse(ifs).get<common::ConfigPeriodic>();
+	common::load_json_config(common::CONFIG_PERIODIC_FILE, common::CONFIG_PERIODIC);
 }
 void CommandRouter::load_config_daily() {
-	std::ifstream ifs(common::CONFIG_DAILY_FILE);
-	if (!ifs.is_open()) {
-		std::cerr << "无法打开配置文件: " << common::CONFIG_DAILY_FILE << std::endl;
-		return;
-	}
-	common::CONFIG_DAILY = json::parse(ifs).get<common::ConfigDaily>();
+	common::load_json_config(common::CONFIG_DAILY_FILE, common::CONFIG_DAILY);
 }
 void CommandRouter::load_fortune() {
 	common::fortunes = common::read_file_lines(common::FORTUNE_FILE);

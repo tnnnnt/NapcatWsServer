@@ -29,6 +29,7 @@ IncludeCategories:
 SpaceBeforeParens: ControlStatements
 
 AllowShortIfStatementsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Empty
 
 BinPackArguments: false
 BinPackParameters: false
