@@ -1,4 +1,4 @@
-﻿cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.16)
 project(NapcatWsServer)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -18,8 +18,6 @@ add_executable(${PROJECT_NAME}
     main.cpp
     core/bot_client.cpp
     logic/command_router.cpp
-    logic/message/handle_message.cpp
-    logic/notice/handle_notice.cpp
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE

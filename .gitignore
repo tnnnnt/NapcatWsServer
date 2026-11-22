@@ -13,3 +13,5 @@ CMakeFiles/
 
 # OS
 .DS_Store
+
+.workbuddy/

@@ -28,6 +28,8 @@ There are no tests in this project.
 
 This is a **WebSocket server** that acts as a backend for a QQ bot, speaking the **OneBot v11** protocol (Napcat framework). One thread per connection.
 
+Currently it is a **minimal skeleton**: networking + send/receive only, with a single echo handler for verification. All business logic has been removed to start fresh.
+
 ```
 WebSocket Client (Napcat/QQ)
     │
@@ -35,21 +37,26 @@ WebSocket Client (Napcat/QQ)
 BotClient (core/)          —— networking, WebSocket I/O, thread pool
     │
     ▼
-CommandRouter (logic/)     —— event routing by post_type
-    ├── HandleMessage      —— ~15 group-chat commands
-    └── HandleNotice       —— group event notices
+CommandRouter (logic/)     —— event routing (currently: echo group messages back)
 ```
+
+### File layout
+
+- `main.cpp` — TCP listener; spawns a detached `BotClient` per accepted connection
+- `core/bot_client.{h,cpp}` — per-connection message pipeline (3 threads: reader / workers / sender)
+- `logic/command_router.{h,cpp}` — event routing / business entry point
+- `logic/message_utils.hpp` — OneBot message construction helpers (namespace `msg`)
+- `logic/logic_types.hpp` — type aliases (`json`, `ApiFunc`, `fs`)
+- `network_types.hpp` — Boost.Beast / Asio aliases
 
 ### Data flow per connection
 
 1. `main()` accepts TCP, upgrades to WebSocket, spawns a detached `BotClient`
-2. `BotClient::start()` launches 5 internal thread types:
+2. `BotClient::start()` launches 3 internal thread types:
    - **reader** — reads JSON from WebSocket in a loop, enqueues to `event_queue_`
-   - **workers** (POOL_SIZE threads) — dequeues events, calls `CommandRouter::handle()` → `HandleMessage`/`HandleNotice`
-   - **sender** — dequeues `send_queue_`, applies random delay for rate limiting, writes to WebSocket
-   - **midnight task** — sleeps to next midnight, triggers daily reset
-   - **periodic task** — reloads config periodically, persists message counts
-3. `CommandRouter::handle()` routes by `event["post_type"]`: `"message"` → `HandleMessage`, `"notice"` → `HandleNotice`
+   - **workers** (`kPoolSize` threads) — dequeues events, calls `CommandRouter::handle()`
+   - **sender** — dequeues `send_queue_`, applies rate-limiting delay, writes to WebSocket
+3. `CommandRouter::handle()` routes by `event["post_type"]`; currently only echoes group messages
 
 ### API call pattern (echo-correlation)
 
@@ -63,31 +70,18 @@ Logic handlers receive an `ApiFunc` — they never touch the network directly. C
 
 ### Rate limiting
 
-`sender_loop()` applies `BASE_DELAY + rand() % RANDOM_DELAY` seconds delay before `send_private_msg`, `send_group_msg`, or `send_msg` actions.
+`sender_loop()` applies `kBaseDelay + rng() % kRandomDelay` seconds delay before sending. The delay values are hardcoded constants in `bot_client.cpp` (in an anonymous namespace).
 
-## Configuration system (runtime)
+## Configuration
 
-All config lives under `/home/bot/qq_robot/` on the production server:
-
-| Config | When loaded | Contents |
-|---|---|---|
-| `port.txt` | Startup | TCP listen port |
-| `config_static.json` | Startup only | admin QQ, robot QQ, pool size, rank size, test group |
-| `config_periodic.json` | Periodically | base_delay, random_delay, time_save_interval |
-| `config_daily.json` | Midnight | min_activity_level |
-| `save/ban.txt` | Startup + on change | Banned user IDs |
-| `save/fortunes.txt` | Once per day | Fortune phrases |
-| `save/today_group_member_message_number.json` | Periodically | Persisted daily message counts |
+Only `port.txt` is read at startup (in `main.cpp`), containing the TCP listen port. All other former config files have been removed.
 
 ## Key patterns
 
-- **Global state in `logic/common.hpp`** — all shared data uses `inline` globals with mutexes for thread safety (`group_members_mutex`, `today_group_member_message_number_mutex`, `group_member_relations_mutex`)
-- **Static classes only** — `CommandRouter`, `HandleMessage`, `HandleNotice` have no instances, only static methods
-- **Command matching** is literal string comparison on `raw_message` (e.g., `"今日运势"`, `"来点色图"`)
+- **Static classes** — `CommandRouter` has no instances, only a static `handle()` method
 - **Message construction** uses helper functions (`add_text_message`, `add_image_message`, `add_at_message`, `add_reply_message`) to build `json::array()` payloads
-- **Python interop** — `script/relations.py` renders relationship graphs via pyvis + Playwright, invoked by C++ via `system()`
 - Chinese-language comments and user-facing strings throughout
-- Minimal error handling: `try/catch` → `cerr` + `sleep_for` retry loops
+- Minimal error handling: `try/catch` → `cerr`/`cout` + `sleep_for` retry loops
 
 ## Namespace aliases (always available)
 
