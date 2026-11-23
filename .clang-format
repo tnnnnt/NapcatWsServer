@@ -16,7 +16,8 @@ BraceWrapping:
 PointerAlignment: Left
 ReferenceAlignment: Left
 
-SortIncludes: true
+SortIncludes: false
+IncludeBlocks: Preserve
 
 InsertBraces: true
 

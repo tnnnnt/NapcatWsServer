@@ -1,6 +1,37 @@
+#include <filesystem>
+#include <string>
+#include <vector>
 #include "command_router.h"
 #include "message_utils.hpp"
-constexpr int64_t TEST_GROUP = 1082705308;// 测试群号，仅该群触发回显，避免打扰其他群
+inline const std::string WORK_DIR = "/home/bot/qq_robot/"; // 工作目录
+inline const std::string SEX_DIR = WORK_DIR + "sex/";	   // 色图
+constexpr int64_t TEST_GROUP = 1092859942;				   // 测试群号，仅该群触发回显，避免打扰其他群
+
+static void get_files(const std::filesystem::path& dir_path, std::vector<std::string>& files) {
+	files.clear();
+	if (!std::filesystem::exists(dir_path) || !std::filesystem::is_directory(dir_path)) {
+		return;
+	}
+	for (const auto& entry : std::filesystem::directory_iterator(dir_path)) {
+		if (entry.is_regular_file()) {
+			files.push_back(entry.path().filename());
+		}
+	}
+}
+
+static void handle_get_sex_image(const ApiFunc& api, int64_t group_id, int64_t time) {
+	std::vector<std::string> files;
+	get_files(SEX_DIR, files);
+	json message = json::array();
+	if (files.empty()) {
+		msg::add_text_message(message, "没有色图了喵~");
+	}
+	else {
+		const std::string random_file = files[time % files.size()];
+		msg::add_image_message(message, "file:///" + SEX_DIR + random_file);
+	}
+	msg::send_group_msg(api, group_id, message);
+}
 
 static void handle_message(const json& event, const ApiFunc& api) {
 	const std::string message_type = event.at("message_type").get<std::string>();
@@ -14,6 +45,13 @@ static void handle_message(const json& event, const ApiFunc& api) {
 			json message = json::array();
 			msg::add_text_message(message, event.dump(4));
 			msg::send_group_msg(api, group_id, message);
+		}
+
+		const auto time = event.at("time").get<int64_t>() + 28800; // 转为北京时间
+		const std::string raw_message = event.at("raw_message").get<std::string>();
+		if (raw_message == "来点色图") {
+			handle_get_sex_image(api, group_id, time);
+			return;
 		}
 	}
 }
