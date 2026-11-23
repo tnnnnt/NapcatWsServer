@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <filesystem>
 #include <string>
 #include <vector>
@@ -33,6 +34,31 @@ static void handle_get_sex_image(const ApiFunc& api, int64_t group_id, int64_t t
 	msg::send_group_msg(api, group_id, message);
 }
 
+static void trim(std::string& str) {
+	const auto first = str.find_first_not_of(" \t\n\r\f\v");
+	if (first == std::string::npos) {
+		str.clear();
+		return;
+	}
+	const auto last = str.find_last_not_of(" \t\n\r\f\v");
+	str.erase(last + 1);
+	str.erase(0, first);
+}
+
+static void filter_valid_messages(json& message_array) {
+	message_array.erase(std::remove_if(message_array.begin(),
+									   message_array.end(),
+									   [](json& message) {
+										   if (message["type"] != "text") {
+											   return false;
+										   }
+										   auto& text = message["data"]["text"].get_ref<std::string&>();
+										   trim(text);
+										   return text.empty();
+									   }),
+						message_array.end());
+}
+
 static void handle_message(const json& event, const ApiFunc& api) {
 	const std::string message_type = event.at("message_type").get<std::string>();
 	if (message_type == "private") {
@@ -53,6 +79,11 @@ static void handle_message(const json& event, const ApiFunc& api) {
 			handle_get_sex_image(api, group_id, time);
 			return;
 		}
+
+		// 预处理
+		json message_array = event.at("message");
+		filter_valid_messages(message_array);
+
 	}
 }
 
