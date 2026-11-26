@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cctype>
 #include <filesystem>
 #include <string>
 #include <vector>
@@ -80,7 +81,11 @@ static bool is_command_of_forward_sex_image(const std::string& raw_message, cons
 			has_call_yun |= text.find("小云") != std::string::npos;
 		}
 		else if (type == "at") {
-			has_call_yun |= std::stoll(msg.at("data").at("qq").get<std::string>()) == YUN_ROBOT_QQ;
+			// at 段的 qq 字段通常是数字字符串，但 @全体成员 时 Napcat 会给出 "all"，
+			// stoll 无法解析 "all" 会抛 invalid_argument，这里先校验再解析。
+			const auto& qq = msg.at("data").at("qq").get<std::string>();
+			bool is_number = !qq.empty() && std::all_of(qq.begin(), qq.end(), [](unsigned char c) { return std::isdigit(c); });
+			has_call_yun |= is_number && std::stoll(qq) == YUN_ROBOT_QQ;
 		}
 		if (has_forward_command && has_call_yun) {
 			return true;

@@ -54,7 +54,7 @@ void BotClient::read_loop() {
 			json j = json::parse(msg); // 解析为 JSON
 			handle_post(j);			   // 分流处理
 		}
-		catch (std::exception& e) {
+		catch (const std::exception& e) {
 			// 读失败（连接断开/消息格式错误等）：打印错误，等待一段时间后重试
 			std::cout << "read error: " << e.what() << std::endl;
 			std::cout << "msg: \n" << msg << std::endl;
@@ -93,7 +93,15 @@ void BotClient::worker_loop() {
 		}
 		// 业务处理。注意：业务里调用 call_api 会阻塞等待回包，
 		// 所以需要多个 worker 线程并行，避免一个事件卡住导致其他事件排队。
-		CommandRouter::handle(event, [this](auto action, auto params) { return call_api(action, params); });
+		try {
+			CommandRouter::handle(event, [this](auto action, auto params) { return call_api(action, params); });
+		}
+		catch (const std::exception& e) {
+			// 兜底：业务处理抛异常时不能让整个进程崩溃（否则 std::terminate -> core dumped）。
+			// 打印异常信息和触发这次崩溃的完整事件 JSON，方便排查后继续处理下一条。
+			std::cerr << "handle error: " << e.what() << std::endl;
+			std::cerr << "event: " << event.dump() << std::endl;
+		}
 	}
 }
 
@@ -116,7 +124,7 @@ void BotClient::sender_loop() {
 			std::lock_guard<std::mutex> lock(ws_mutex_); // 写锁：保证同一时刻只有一个线程写 WebSocket
 			ws_.write(boost::asio::buffer(msg.dump()));
 		}
-		catch (std::exception& e) {
+		catch (const std::exception& e) {
 			std::cout << "send error: " << e.what() << std::endl;
 		}
 	}
