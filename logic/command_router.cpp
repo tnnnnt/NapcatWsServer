@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <cctype>
 #include <filesystem>
+#include <iostream>
 #include <string>
 #include <vector>
 #include "command_router.h"
@@ -157,6 +158,25 @@ static void handle_notice(const json& event, const ApiFunc& api) {
 	// todo
 }
 
+// 处理元事件（目前只关心心跳），用于第一时间发现掉线。
+// 心跳 status.online 为 false 表示 QQ 账号已离线（典型是登录态失效被服务端作废），
+// 此时 NapCat 进程还活着（good 可能仍为 true），是「假在线」状态，需要扫码重新登录。
+static void handle_meta_event(const json& event) {
+	const std::string meta_event_type = event.at("meta_event_type").get<std::string>();
+	if (meta_event_type != "heartbeat") {
+		return; // 其他元事件（lifecycle 等）暂不处理
+	}
+	const json& status = event.at("status");
+	if (!status.at("online").get<bool>()) {
+		// 醒目告警：账号掉线，提示去扫码重新登录
+		std::cerr << "\n========== [告警] QQ 机器人已掉线 ==========\n"
+				  << "账号 " << event.at("self_id").get<std::string>() << " 状态 offline，登录态可能已失效。\n"
+				  << "请通过 WebUI 扫码重新登录：http://服务器IP:6099/webui?token=<token>\n"
+				  << "=============================================\n"
+				  << std::endl;
+	}
+}
+
 void CommandRouter::handle(const json& event, const ApiFunc& api) {
 	const std::string post_type = event.at("post_type").get<std::string>();
 	if (post_type == "message") {
@@ -164,5 +184,8 @@ void CommandRouter::handle(const json& event, const ApiFunc& api) {
 	}
 	else if (post_type == "notice") {
 		handle_notice(event, api);
+	}
+	else if (post_type == "meta_event") {
+		handle_meta_event(event);
 	}
 }
